@@ -1,6 +1,6 @@
 ---
-// Bloque de suscripción. El formulario NO está conectado a ningún servicio todavía:
-// cambiar `action` por el endpoint real (Mailchimp, Brevo, etc.).
+// Bloque de suscripción. Envía a Formspree (ver src/data/formularios.ts y .env.example).
+import { formspree } from '../data/formularios';
 ---
 <section class="newsletter container" aria-labelledby="newsletter-titulo">
   <div class="card">
@@ -12,15 +12,60 @@
         <strong>Sé parte de la familia de CK OÍDO</strong>
       </h2>
     </div>
-    <form class="form" action="#" method="post" data-newsletter>
-      <label class="sr-only" for="newsletter-email">Correo electrónico</label>
-      <input id="newsletter-email" name="email" type="email" required placeholder="Ingrese su correo" autocomplete="email" />
-      <button type="submit">Suscríbase</button>
-    </form>
+    <div class="suscripcion">
+      <form
+        class="form"
+        action={formspree.boletin || '#'}
+        method="post"
+        data-formspree
+        data-ok="¡Listo! Ya es parte de la familia de CK Oído."
+      >
+        <input type="hidden" name="_subject" value="Nueva suscripción al boletín de ckoido.com" />
+        <input type="hidden" name="formulario" value="Boletín" />
+        <input type="text" name="_gotcha" tabindex="-1" autocomplete="off" class="trampa" aria-hidden="true" />
+        <label class="sr-only" for="newsletter-email">Correo electrónico</label>
+        <input id="newsletter-email" name="email" type="email" required placeholder="Ingrese su correo" autocomplete="email" />
+        <button type="submit">Suscríbase</button>
+      </form>
+      <p class="estado" data-estado role="status" aria-live="polite"></p>
+    </div>
   </div>
 </section>
 
+<script>
+  import '../scripts/formspree';
+</script>
+
 <style>
+  .suscripcion {
+    position: relative;
+    min-width: 0;
+  }
+  .trampa {
+    position: absolute !important;
+    left: -9999px !important;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+  }
+  .estado:empty {
+    display: none;
+  }
+  .estado {
+    margin: 10px 0 0;
+    padding-left: 6px;
+    font-weight: 600;
+    font-size: 15px;
+    color: #fff;
+  }
+  .estado[data-tipo='error'] {
+    color: #ffc9d5;
+  }
+  .form button:disabled {
+    opacity: 0.7;
+    cursor: wait;
+  }
+
   .newsletter {
     padding-block: clamp(48px, 4vw, 77px) clamp(32px, 2.1vw, 41px);
   }

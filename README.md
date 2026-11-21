@@ -1,43 +1,45 @@
-# Astro Starter Kit: Minimal
+# CK Oído — sitio web (Astro)
 
-```sh
-npm create astro@latest -- --template minimal
-```
+Sitio de CK Oído construido con [Astro](https://astro.build) a partir del diseño en Figma «CKOIDO».
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+## Comandos
 
-## 🚀 Project Structure
+| Comando           | Qué hace                                   |
+| :---------------- | :----------------------------------------- |
+| `npm install`     | Instala dependencias                       |
+| `npm run dev`     | Servidor local en `http://localhost:4321`  |
+| `npm run build`   | Genera el sitio estático en `./dist/`      |
+| `npm run preview` | Sirve `./dist/` para revisarlo             |
 
-Inside of your Astro project, you'll see the following folders and files:
+## Páginas
 
-```text
-/
-├── public/
-├── src/
-│   └── pages/
-│       └── index.astro
-└── package.json
-```
+| Ruta                          | Contenido                                  |
+| :---------------------------- | :----------------------------------------- |
+| `/`                           | Inicio                                     |
+| `/nosotros`                   | Nosotros + ¿Dónde comprar? (`#donde-comprar`) |
+| `/nuestro-producto`           | CK Oído                                    |
+| `/nuestro-producto/sincerax`  | Sincerax                                   |
+| `/otitis-externa`             | Otitis externa                             |
+| `/reg-cert-pol`               | Registro, certificación y política         |
+| `/blog`, `/blog/<slug>`       | Blog (artículos en `src/content/blog/*.md`) |
+| `/contacto`                   | Contacto                                   |
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
+Menú, redes sociales, teléfonos y dirección: `src/data/sitio.ts`.
 
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
+## Formularios (Formspree)
 
-Any static assets, like images, can be placed in the `public/` directory.
+Los formularios de **Contacto** y **Boletín** envían a [Formspree](https://formspree.io) sin salir de la página.
 
-## 🧞 Commands
+1. Crear una cuenta en Formspree y un formulario (o dos: uno para contacto y otro para el boletín).
+2. Copiar el ID del formulario: es la parte final de la URL `https://formspree.io/f/<ID>`.
+3. Copiar `.env.example` como `.env` y completarlo (o definir las mismas variables en el hosting):
 
-All commands are run from the root of the project, from a terminal:
+   ```env
+   PUBLIC_FORMSPREE_CONTACTO=<ID>
+   PUBLIC_FORMSPREE_BOLETIN=<ID>   # opcional: si se deja vacío, usa el de contacto
+   ```
 
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
+4. Volver a ejecutar `npm run build` (los IDs se incluyen al construir el sitio).
 
-## 👀 Want to learn more?
-
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+Mientras no haya ID, los formularios muestran «Este formulario todavía no está configurado» al enviarlos.
+Cada envío incluye un asunto, un campo `formulario` («Contacto» o «Boletín») para distinguirlos y la trampa anti-spam `_gotcha`.
