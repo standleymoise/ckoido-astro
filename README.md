@@ -2,6 +2,17 @@
 
 Sitio de CK Oído construido con [Astro](https://astro.build) a partir del diseño en Figma «CKOIDO».
 
+**Sitio publicado:** https://standleymoise.github.io/ckoido-astro/
+
+## Publicación (GitHub Pages)
+
+Cada push a `main` construye y publica el sitio con `.github/workflows/deploy.yml`.
+El sitio vive en el subdirectorio `/ckoido-astro`, así que todas las rutas internas y
+archivos de `public/` se escriben con `url('/ruta')` de `src/data/sitio.ts`.
+
+Para un dominio propio: configurarlo en *Settings → Pages* del repo y definir en el
+workflow las variables `SITE_URL=https://dominio` y `BASE_PATH=/`.
+
 ## Comandos
 
 | Comando           | Qué hace                                   |
