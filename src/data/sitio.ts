@@ -1,15 +1,21 @@
 // Datos compartidos del sitio (rutas, menú, redes, farmacias).
 
+/** Prefijo del sitio (p. ej. "/ckoido-astro" en GitHub Pages, "" en un dominio propio). */
+export const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+
+/** Convierte una ruta absoluta del sitio ("/nosotros", "/img/x.svg") en una URL con el prefijo. */
+export const url = (path: string) => (path.startsWith('/') ? `${base}${path}` : path);
+
 export const rutas = {
-  inicio: '/',
-  nosotros: '/nosotros',
-  dondeComprar: '/nosotros#donde-comprar',
-  producto: '/nuestro-producto',
-  sincerax: '/nuestro-producto/sincerax',
-  otitis: '/otitis-externa',
-  regCertPol: '/reg-cert-pol',
-  blog: '/blog',
-  contacto: '/contacto',
+  inicio: url('/'),
+  nosotros: url('/nosotros'),
+  dondeComprar: url('/nosotros#donde-comprar'),
+  producto: url('/nuestro-producto'),
+  sincerax: url('/nuestro-producto/sincerax'),
+  otitis: url('/otitis-externa'),
+  regCertPol: url('/reg-cert-pol'),
+  blog: url('/blog'),
+  contacto: url('/contacto'),
 };
 
 /** Destino de todos los botones «Comprar ahora». */
@@ -37,9 +43,9 @@ export const menuFooter = [
 
 // TODO: reemplazar "#" por las URLs reales de las redes de CK Oído.
 export const redes = [
-  { label: 'Facebook', icon: '/img/red-facebook.svg', href: '#' },
-  { label: 'Instagram', icon: '/img/red-instagram.svg', href: '#' },
-  { label: 'WhatsApp', icon: '/img/red-whatsapp.svg', href: '#' },
+  { label: 'Facebook', icon: url('/img/red-facebook.svg'), href: '#' },
+  { label: 'Instagram', icon: url('/img/red-instagram.svg'), href: '#' },
+  { label: 'WhatsApp', icon: url('/img/red-whatsapp.svg'), href: '#' },
 ];
 
 export const farmacias = [
@@ -53,8 +59,9 @@ export const telHref = (tel: string) => `tel:${tel.replace(/\s+/g, '')}`;
 
 /** Marca como activo el ítem del menú para la ruta actual (incluye subrutas). */
 export const isActive = (href: string, path: string) => {
+  const sinBase = (p: string) => (base && p.startsWith(base) ? p.slice(base.length) || '/' : p);
   const clean = (p: string) => (p.length > 1 ? p.replace(/\/$/, '') : p);
-  const h = clean(href.split('#')[0]);
-  const p = clean(path);
+  const h = clean(sinBase(href.split('#')[0]));
+  const p = clean(sinBase(path));
   return h === '/' ? p === '/' : p === h || p.startsWith(h + '/');
 };

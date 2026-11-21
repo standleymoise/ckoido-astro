@@ -1,7 +1,7 @@
 ---
 // Tarjeta de contacto (Figma: Frame 7 «Contacto» y final de Inicio).
 // El formulario envía a Formspree (ver src/data/formularios.ts y .env.example).
-import { farmacias, direccion, telHref } from '../data/sitio';
+import { farmacias, direccion, telHref, url } from '../data/sitio';
 import { formspree } from '../data/formularios';
 ---
 <section class="contacto container" aria-labelledby="contacto-titulo">
@@ -14,14 +14,14 @@ import { formspree } from '../data/formularios';
       <ul class="datos">
         {farmacias.map((f) => (
           <li>
-            <img src="/img/contacto/icono-telefono.svg" alt="" width="38" height="38" />
+            <img src={url("/img/contacto/icono-telefono.svg")} alt="" width="38" height="38" />
             <span>
               {f.nombre}: <a href={telHref(f.telefono)}>{f.telefono}</a>
             </span>
           </li>
         ))}
         <li>
-          <img src="/img/contacto/icono-ubicacion.svg" alt="" width="38" height="38" />
+          <img src={url("/img/contacto/icono-ubicacion.svg")} alt="" width="38" height="38" />
           <span>{direccion}</span>
         </li>
       </ul>

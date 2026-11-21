@@ -1,6 +1,6 @@
 ---
 import { Image } from 'astro:assets';
-import { comprarHref, rutas } from '../../data/sitio';
+import { comprarHref, rutas, url } from '../../data/sitio';
 import fotoProducto from '../../assets/home/acerca-producto.jpg';
 import fotoNadador from '../../assets/home/acerca-nadador.jpg';
 import fotoPiscina from '../../assets/home/acerca-piscina.jpg';
@@ -31,9 +31,9 @@ import fotoPiscina from '../../assets/home/acerca-piscina.jpg';
       widths={[320, 480, 720, 1060]}
       sizes="(max-width: 960px) 55vw, 23vw"
     />
-    <img class="deco deco-1" src="/img/home/deco-circulos-1.svg" alt="" width="133" height="104" loading="lazy" />
+    <img class="deco deco-1" src={url("/img/home/deco-circulos-1.svg")} alt="" width="133" height="104" loading="lazy" />
     <span class="deco deco-2" aria-hidden="true">
-      <img src="/img/home/deco-circulos-2.svg" alt="" width="66" height="148" loading="lazy" />
+      <img src={url("/img/home/deco-circulos-2.svg")} alt="" width="66" height="148" loading="lazy" />
     </span>
     <span class="deco punto" aria-hidden="true"></span>
     <span class="deco aro" aria-hidden="true"></span>

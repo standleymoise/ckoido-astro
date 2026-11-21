@@ -1,10 +1,11 @@
 ---
+import { url } from '../data/sitio';
 // Bloque de suscripción. Envía a Formspree (ver src/data/formularios.ts y .env.example).
 import { formspree } from '../data/formularios';
 ---
 <section class="newsletter container" aria-labelledby="newsletter-titulo">
   <div class="card">
-    <img class="ondas" src="/img/ondas-boletin.svg" alt="" aria-hidden="true" />
+    <img class="ondas" src={url("/img/ondas-boletin.svg")} alt="" aria-hidden="true" />
     <div class="texto">
       <p class="kicker">Suscríbase a nuestro boletín</p>
       <h2 id="newsletter-titulo">

@@ -1,16 +1,17 @@
 ---
+import { url } from '../data/sitio';
 // Logo CK Oído armado con las 3 piezas vectoriales del Figma (CK + gota + ído).
 interface Props {
   /** Ancho total del logo en px (header: 184, footer: 232). */
   size?: number;
   href?: string;
 }
-const { size = 184, href = '/' } = Astro.props;
+const { size = 184, href = url('/') } = Astro.props;
 ---
 <a class="logo" href={href} style={`--logo-w:${size}px`} aria-label="CK Oído, inicio">
-  <img src="/img/logo-ck.svg" alt="" class="ck" width="66" height="36" />
-  <img src="/img/logo-gota.svg" alt="" class="gota" width="39" height="59" />
-  <img src="/img/logo-ido.svg" alt="" class="ido" width="68" height="38" />
+  <img src={url("/img/logo-ck.svg")} alt="" class="ck" width="66" height="36" />
+  <img src={url("/img/logo-gota.svg")} alt="" class="gota" width="39" height="59" />
+  <img src={url("/img/logo-ido.svg")} alt="" class="ido" width="68" height="38" />
 </a>
 
 <style>

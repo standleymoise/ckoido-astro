@@ -1,11 +1,12 @@
 ---
+import { url } from '../data/sitio';
 interface Props {
   title: string;
 }
 const { title } = Astro.props;
 ---
 <section class="page-title">
-  <img class="ondas" src="/img/ondas-titulo.svg" alt="" aria-hidden="true" />
+  <img class="ondas" src={url("/img/ondas-titulo.svg")} alt="" aria-hidden="true" />
   <div class="container">
     <h1>{title}</h1>
   </div>
