@@ -1,0 +1,19 @@
+---
+/**
+ * Banda azul a todo el ancho (Figma "Group 1000007222", node 169:98): degradado
+ * azul con el patrón de ondas tenue. Envuelve SplitSections con tone="dark".
+ */
+---
+<div class="banda">
+  <slot />
+</div>
+
+<style>
+  .banda {
+    display: grid;
+    gap: clamp(48px, 4.3vw, 83px);
+    padding-block: clamp(48px, 4vw, 77px);
+    background: var(--azul-900) url('/img/otitis/banda-ondas.svg') center / 100% 100% no-repeat;
+    color: #fff;
+  }
+</style>

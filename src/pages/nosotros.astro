@@ -1,0 +1,53 @@
+---
+import Base from '../layouts/Base.astro';
+import Header from '../components/Header.astro';
+import PageTitle from '../components/PageTitle.astro';
+import SplitSection from '../components/SplitSection.astro';
+import PromoBanner from '../components/PromoBanner.astro';
+import Farmacias from '../components/nosotros/Farmacias.astro';
+import Newsletter from '../components/Newsletter.astro';
+import Footer from '../components/Footer.astro';
+import { comprarHref } from '../data/sitio';
+import fotoMujer from '../assets/nosotros/mujer-gotero.png';
+---
+<Base
+  title="Nosotros | CK Oído"
+  description="CK Oído es fabricado por Roleisa Farmacéutica, empresa 100% costarricense. Conozca dónde comprar CK Oído."
+>
+  <Header />
+  <main>
+    <PageTitle title="Nosotros" />
+
+    <SplitSection
+      id="acerca"
+      image={fotoMujer}
+      alt="Mujer sonriente aplicándose gotas en el oído con un gotero"
+      title="Acerca de Nosotros"
+      ratio="748 / 470"
+      priority
+    >
+      <p>
+        CK Oído es fabricado por Roleisa Farmacéutica, empresa 100% costarricense con más de 7 años de experiencia
+        en la producción de medicamentos y cosméticos dedicados al cuidado de toda la familia. Contamos con variedad
+        de productos para satisfacer las necesidades del cliente.
+      </p>
+      <p>
+        Con innovación y experiencia desarrollamos productos con altos estándares de calidad y eficacia para el
+        mercado costarricense; así como también productos para exportación.
+      </p>
+      <a class="btn" href={comprarHref}>Comprar ahora</a>
+    </SplitSection>
+
+    <PromoBanner />
+    <Farmacias />
+    <Newsletter />
+  </main>
+  <Footer />
+</Base>
+
+<style>
+  /* El Figma recorta la foto por abajo: mantener la cara visible. */
+  :global(#acerca .foto img) {
+    object-position: 50% 0;
+  }
+</style>

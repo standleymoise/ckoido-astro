@@ -1,0 +1,127 @@
+---
+import Base from '../../layouts/Base.astro';
+import Header from '../../components/Header.astro';
+import PageTitle from '../../components/PageTitle.astro';
+import SplitSection from '../../components/SplitSection.astro';
+import ComoUtilizarlas from '../../components/ComoUtilizarlas.astro';
+import Newsletter from '../../components/Newsletter.astro';
+import Footer from '../../components/Footer.astro';
+import { comprarHref } from '../../data/sitio';
+import fotoCaja from '../../assets/producto/ck-oido-caja.jpg';
+
+const beneficios = [
+  'CK Oído seca y alivia la incomodidad de los oídos obstruidos por el agua.',
+  'Formulado con un agente absorbente, ayuda a secar el exceso de agua mientras acondiciona el delicado revestimiento del canal auditivo.',
+  'Seca rápidamente el agua de los oídos en los nadadores y en cualquier persona que lo desee. CK Oído es seguro y eficaz, por eso puede utilizarse en niños desde los 2 años de edad.',
+  'CK Oído es excelente para usar después de nadar, bañarse, ducharse, bucear, surfear y otras actividades relacionadas con el agua.',
+];
+---
+<Base
+  title="Nuestro producto | CK Oído"
+  description="CK Oído: gotas que secan el agua atrapada en los oídos y ayudan a prevenir infecciones del oído externo. Conozca cómo utilizarlas."
+>
+  <Header />
+  <main>
+    <PageTitle title="Nuestro producto" />
+
+    <SplitSection
+      image={fotoCaja}
+      alt="Caja y frasco de gotas CK Oído, uso tópico 15 ml, sobre agua con el mar de fondo"
+      title="CK Oído"
+      ratio="748 / 468"
+      priority
+    >
+      <p>
+        CK Oído se ha convertido en la gran solución para evitar la mayoría de infecciones del oído externo; nuestros
+        consumidores han encontrado en CK Oído la respuesta que tanto buscaban.
+      </p>
+      <p>
+        Nuestros clientes satisfechos han experimentado un alivio inmediato, gracias a la fórmula especializada que
+        combate la humedad generada en el oído, al mismo tiempo que lubrica. Adiós a la sensación de oído húmedo con
+        CK Oído.
+      </p>
+      <a class="btn" href={comprarHref}>Comprar ahora</a>
+    </SplitSection>
+
+    <ComoUtilizarlas />
+
+    <section class="solucion container" aria-labelledby="solucion-titulo">
+      <h2 id="solucion-titulo">Solución eficaz para eliminar el agua de los oídos</h2>
+      <div class="divisor" aria-hidden="true"></div>
+      <div class="detalle">
+        <p class="lead">¡Ayuda a secar el agua atrapada en sus oídos!</p>
+        <ul>
+          {beneficios.map((b) => <li>{b}</li>)}
+        </ul>
+      </div>
+    </section>
+
+    <Newsletter />
+  </main>
+  <Footer />
+</Base>
+
+<style>
+  .solucion {
+    display: grid;
+    grid-template-columns: minmax(0, 723fr) 1px minmax(0, 793fr);
+    column-gap: clamp(32px, 4.1vw, 80px);
+    align-items: start;
+    padding-block: clamp(56px, 6.5vw, 125px) clamp(24px, 1.8vw, 34px);
+  }
+  h2 {
+    margin: 0;
+    max-width: 723px;
+    font-weight: 700;
+    font-size: clamp(26px, 2.08vw, 40px);
+    line-height: 1.2;
+    color: var(--azul-900);
+  }
+  .divisor {
+    align-self: stretch;
+    margin-block: 19px 24px;
+    background: rgba(82, 99, 119, 0.35);
+  }
+  .lead {
+    margin: 0 0 clamp(20px, 2vw, 40px);
+    font-weight: 700;
+    font-size: clamp(19px, 1.15vw, 22px);
+    line-height: 1.602;
+    color: var(--texto);
+  }
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: clamp(18px, 1.9vw, 37px);
+  }
+  li {
+    position: relative;
+    padding-left: 1.2em;
+    font-size: 17px;
+    line-height: 1.602;
+    color: var(--texto);
+  }
+  li::before {
+    content: '–';
+    position: absolute;
+    left: 0;
+  }
+
+  @media (max-width: 900px) {
+    .solucion {
+      grid-template-columns: 1fr;
+      row-gap: 24px;
+    }
+    .divisor {
+      height: 1px;
+      margin: 0;
+      width: 80px;
+      background: var(--rojo);
+    }
+    li {
+      font-size: 16px;
+    }
+  }
+</style>

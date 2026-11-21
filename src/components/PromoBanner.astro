@@ -10,6 +10,10 @@ interface Props {
   image?: ImageMetadata;
   /** Posición de la foto (object-position) en escritorio. */
   imagePosition?: string;
+  /** Dónde empieza la foto desde la izquierda (Figma: 24.08% por defecto). */
+  imageStart?: string;
+  /** Degradado sobre la foto en escritorio. */
+  gradient?: string;
   kicker?: string;
   title?: string;
   highlight?: string;
@@ -19,6 +23,8 @@ interface Props {
 const {
   image = fotoBanner,
   imagePosition = '50% 30%',
+  imageStart = '24.08%',
+  gradient = 'linear-gradient(106.08deg, rgb(10, 69, 132) 31.666%, rgba(10, 69, 133, 0) 62.821%)',
   kicker = 'Lleve las gotas a todos lados',
   title = 'Disfrute al máximo.',
   highlight = 'La prevención está en sus manos',
@@ -26,7 +32,7 @@ const {
   ctaHref = comprarHref,
 } = Astro.props;
 ---
-<section class="promo" aria-labelledby="promo-titulo" style={`--img-pos:${imagePosition}`}>
+<section class="promo" aria-labelledby="promo-titulo" style={`--img-pos:${imagePosition};--img-start:${imageStart};--gradient:${gradient}`}>
   <div class="media" aria-hidden="true">
     <Image
       src={image}
@@ -70,7 +76,7 @@ const {
   /* Figma: la foto ocupa el 75.92% derecho; degradado 106° de azul sólido (31.7%) a transparente (62.8%) */
   .media {
     position: absolute;
-    inset: 0 0 0 24.08%;
+    inset: 0 0 0 var(--img-start);
   }
   .media img {
     width: 100%;
@@ -83,7 +89,7 @@ const {
     position: absolute;
     inset: 0;
     z-index: 1;
-    background: linear-gradient(106.08deg, rgb(10, 69, 132) 31.666%, rgba(10, 69, 133, 0) 62.821%);
+    background: var(--gradient);
     pointer-events: none;
   }
 

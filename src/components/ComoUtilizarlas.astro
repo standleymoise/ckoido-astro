@@ -1,0 +1,215 @@
+---
+/**
+ * Sección azul «¿Cómo utilizarlas?» (Figma Frame 3, grupo 148:1101).
+ * Autocontenida y a sangre completa: foto de fondo + capa azul, título, intro
+ * y 5 tarjetas de cristal con los pasos de aplicación. Sin props.
+ */
+import { Image } from 'astro:assets';
+import fondo from '../assets/como-utilizarlas/fondo.jpg';
+import paso1 from '../assets/como-utilizarlas/paso-1.png';
+import paso2 from '../assets/como-utilizarlas/paso-2.png';
+import paso3 from '../assets/como-utilizarlas/paso-3.png';
+import paso4 from '../assets/como-utilizarlas/paso-4.png';
+import paso5 from '../assets/como-utilizarlas/paso-5.png';
+
+const pasos = [
+  { img: paso1, alt: 'Manos lavándose bajo el grifo', texto: 'Lave sus manos y asegúrese de que estén limpias y secas.' },
+  { img: paso2, alt: 'Mano agitando un frasco de gotas CK Oído', texto: 'Agite el frasco suavemente para mezclar bien las gotas.' },
+  { img: paso3, alt: 'Hombre señalando su oído', texto: 'Aplique 2 o 3 gotas en cada oído.' },
+  {
+    img: paso4,
+    alt: 'Hombre acostado de lado descansando',
+    texto: 'Permanezca acostado de lado durante unos 2 minutos para que las gotas se distribuyan correctamente.',
+  },
+  { img: paso5, alt: 'Mujer secándose el oído con una toalla', texto: 'Seque cualquier exceso de líquido con una toalla suave y limpia.' },
+];
+---
+<section class="como" aria-labelledby="como-titulo">
+  <Image
+    class="fondo"
+    src={fondo}
+    alt=""
+    aria-hidden="true"
+    widths={[768, 1280, 1920, 2560]}
+    sizes="100vw"
+    format="webp"
+    quality={70}
+    loading="lazy"
+  />
+  <div class="capa" aria-hidden="true"></div>
+
+  <div class="contenido container">
+    <h2 id="como-titulo">¿Cómo utilizarlas?</h2>
+    <p class="intro">
+      En CK Oído nos preocupamos por su bienestar y queremos que disfrute al máximo de sus actividades acuáticas
+      favoritas sin preocuparse por los problemas posteriores. Confíe en nuestras gotas y mantenga sus oídos sanos y
+      libres de incomodidades.
+    </p>
+    <p class="lead">La aplicación de nuestras gotas para el oído es muy sencilla. Siga estos pasos:</p>
+
+    <ol class="pasos">
+      {
+        pasos.map((p, i) => (
+          <li class="paso">
+            <span class="sr-only">Paso {i + 1}: </span>
+            <Image
+              class="foto"
+              src={p.img}
+              alt={p.alt}
+              width={268}
+              height={268}
+              format="webp"
+              quality={80}
+              loading="lazy"
+            />
+            <p>{p.texto}</p>
+          </li>
+        ))
+      }
+    </ol>
+  </div>
+</section>
+
+<style>
+  .como {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    width: 100%;
+    padding-block: clamp(48px, 3.3vw, 62px) clamp(48px, 3.6vw, 70px);
+    color: #fff;
+    background: var(--azul-900);
+  }
+  .como > :global(.fondo) {
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .capa {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(90deg, var(--azul-900), var(--azul-600));
+    opacity: 0.8;
+  }
+
+  .contenido {
+    text-align: center;
+  }
+  h2 {
+    margin: 0 0 clamp(20px, 1.8vw, 32px);
+    font-weight: 700;
+    font-size: clamp(28px, 2.08vw, 40px);
+    line-height: 1.2;
+    color: #fff;
+  }
+  .intro,
+  .lead {
+    margin: 0 auto;
+    font-size: 17px;
+    line-height: 1.602;
+  }
+  .intro {
+    max-width: 1487px;
+    margin-bottom: 16px;
+  }
+  .lead {
+    max-width: 615px;
+    font-weight: 600;
+  }
+
+  .pasos {
+    list-style: none;
+    margin: clamp(28px, 2.2vw, 42px) auto 0;
+    padding: 0;
+    max-width: 1636px;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: clamp(14px, 1.3vw, 25px);
+  }
+  .paso {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: clamp(18px, 1.35vw, 26px) clamp(14px, 1.1vw, 20px) 28px;
+    min-height: clamp(260px, 17vw, 325px);
+    border: 1px solid #fff;
+    border-radius: 20px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.3));
+    box-shadow: 3px 4px 20px rgba(237, 40, 83, 0.1);
+    backdrop-filter: blur(2px);
+  }
+  .paso :global(.foto) {
+    width: clamp(104px, 7vw, 134px);
+    height: auto;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+  .paso p {
+    margin: clamp(16px, 1.05vw, 20px) 0 0;
+    max-width: 285px;
+    font-weight: 500;
+    font-size: clamp(16px, 0.99vw, 19px);
+    line-height: 1.602;
+  }
+
+  @media (max-width: 1100px) {
+    .pasos {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+    .paso {
+      grid-column: span 2;
+    }
+    /* 3 arriba + 2 centradas abajo */
+    .paso:nth-child(4) {
+      grid-column: 2 / span 2;
+    }
+  }
+
+  @media (max-width: 760px) {
+    .pasos {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .paso,
+    .paso:nth-child(4) {
+      grid-column: auto;
+      min-height: 0;
+    }
+    .paso:last-child {
+      grid-column: 1 / -1;
+      justify-self: center;
+      width: calc(50% - 7px);
+    }
+  }
+
+  @media (max-width: 480px) {
+    .intro,
+    .lead {
+      font-size: 16px;
+    }
+    .pasos {
+      grid-template-columns: 1fr;
+    }
+    .paso:last-child {
+      width: auto;
+      justify-self: stretch;
+    }
+    .paso {
+      flex-direction: row;
+      text-align: left;
+      gap: 16px;
+      padding: 16px;
+    }
+    .paso :global(.foto) {
+      flex: none;
+      width: 88px;
+    }
+    .paso p {
+      margin: 0;
+    }
+  }
+</style>

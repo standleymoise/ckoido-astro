@@ -1,0 +1,202 @@
+---
+// Tarjeta de contacto (Figma: Frame 7 «Contacto» y final de Inicio).
+// El formulario NO está conectado a ningún servicio todavía:
+// TODO: cambiar `action` por el endpoint real (Formspree, Netlify Forms, API propia, etc.).
+import { farmacias, direccion, telHref } from '../data/sitio';
+---
+<section class="contacto container" aria-labelledby="contacto-titulo">
+  <div class="card">
+    <div class="info">
+      <h2 id="contacto-titulo">Estamos aquí para escucharte</h2>
+      <p>¿Tienes alguna pregunta o necesitas más información?</p>
+      <p>Nuestro equipo está listo para ayudarte y brindarte la atención que necesitas. Contáctanos y hablemos.</p>
+
+      <ul class="datos">
+        {farmacias.map((f) => (
+          <li>
+            <img src="/img/contacto/icono-telefono.svg" alt="" width="38" height="38" />
+            <span>
+              {f.nombre}: <a href={telHref(f.telefono)}>{f.telefono}</a>
+            </span>
+          </li>
+        ))}
+        <li>
+          <img src="/img/contacto/icono-ubicacion.svg" alt="" width="38" height="38" />
+          <span>{direccion}</span>
+        </li>
+      </ul>
+    </div>
+
+    <form class="form" action="#" method="post" data-contacto>
+      <div class="campo">
+        <label for="contacto-nombre">Nombre</label>
+        <input id="contacto-nombre" name="nombre" type="text" required autocomplete="given-name" placeholder="Ingresa tu nombre" />
+      </div>
+      <div class="campo">
+        <label for="contacto-apellidos">Apellidos</label>
+        <input id="contacto-apellidos" name="apellidos" type="text" autocomplete="family-name" placeholder="Ingresa tus apellidos" />
+      </div>
+      <div class="campo">
+        <label for="contacto-email">Correo electrónico</label>
+        <input id="contacto-email" name="email" type="email" required autocomplete="email" placeholder="Ingresa tu correo electrónico" />
+      </div>
+      <div class="campo">
+        <label for="contacto-telefono">Número de teléfono</label>
+        <input id="contacto-telefono" name="telefono" type="tel" autocomplete="tel" placeholder="+506 7171-7171" />
+      </div>
+      <div class="campo ancho">
+        <label for="contacto-mensaje">Mensaje</label>
+        <textarea id="contacto-mensaje" name="mensaje" rows="5" required placeholder="Escríbenos tu mensaje"></textarea>
+      </div>
+      <button type="submit">Enviar ahora</button>
+    </form>
+  </div>
+</section>
+
+<style>
+  .contacto {
+    padding-block: clamp(32px, 2.45vw, 47px) clamp(40px, 3.25vw, 62px);
+  }
+  .card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 775px);
+    gap: clamp(32px, 3vw, 60px);
+    padding: clamp(28px, 2.1vw, 40px) clamp(20px, 2.6vw, 50px) clamp(32px, 2.1vw, 40px) clamp(20px, 2.75vw, 53px);
+    border-radius: 20px;
+    background: linear-gradient(90deg, var(--azul-900), var(--azul-600));
+    color: #fff;
+  }
+
+  /* Columna de texto */
+  .info {
+    max-width: 741px;
+    padding-top: clamp(0px, 0.9vw, 17px);
+  }
+  h2 {
+    margin: 0 0 clamp(20px, 1.6vw, 30px);
+    font-weight: 700;
+    font-size: clamp(26px, 2.08vw, 40px);
+    line-height: 1.2;
+  }
+  .info p {
+    margin: 0 0 17px;
+    font-size: clamp(16px, 1.01vw, 19.44px);
+    line-height: 1.602;
+  }
+  .datos {
+    list-style: none;
+    margin: clamp(24px, 1.6vw, 30px) 0 0;
+    padding: 0;
+    display: grid;
+    gap: 17px;
+  }
+  .datos li {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    font-family: var(--font-alt);
+    font-weight: 500;
+    font-size: clamp(17px, 1.06vw, 20.4px);
+    line-height: 1.3;
+  }
+  .datos img {
+    flex: none;
+    width: 38px;
+    height: 38px;
+  }
+  .datos a {
+    font-weight: 800;
+    white-space: nowrap;
+    text-decoration: none;
+  }
+  .datos a:hover {
+    text-decoration: underline;
+  }
+
+  /* Formulario */
+  .form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 17px 18px;
+    align-content: start;
+  }
+  .campo {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    min-width: 0;
+  }
+  .campo.ancho {
+    grid-column: 1 / -1;
+  }
+  label {
+    padding-left: 4px;
+    font-size: 16px;
+    line-height: 1.75;
+  }
+  input,
+  textarea {
+    width: 100%;
+    min-height: 47px;
+    padding: 12px 16px;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.06);
+    box-shadow: 3px 4px 20px 0 rgba(4, 116, 186, 0.06);
+    color: #fff;
+    font: 500 15px / 1.4 var(--font-sans);
+  }
+  textarea {
+    min-height: 160px;
+    resize: vertical;
+  }
+  input::placeholder,
+  textarea::placeholder {
+    color: #c9d3de;
+    font-size: 13px;
+  }
+  input:focus-visible,
+  textarea:focus-visible {
+    outline: 2px solid #ffb3c4;
+    outline-offset: 1px;
+    border-color: #fff;
+  }
+  button {
+    justify-self: start;
+    margin-top: 10px;
+    min-width: 182px;
+    height: 40px;
+    padding: 0 32px;
+    border: 0;
+    border-radius: 60px;
+    background: var(--rojo);
+    color: #fff;
+    font: 600 18px / 1 var(--font-sans);
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  button:hover {
+    background: #d11a43;
+  }
+
+  @media (max-width: 1000px) {
+    .card {
+      grid-template-columns: 1fr;
+    }
+  }
+  @media (max-width: 560px) {
+    .form {
+      grid-template-columns: 1fr;
+    }
+    .datos li {
+      align-items: flex-start;
+    }
+    .datos a {
+      white-space: normal;
+    }
+    button {
+      justify-self: stretch;
+      height: 46px;
+    }
+  }
+</style>

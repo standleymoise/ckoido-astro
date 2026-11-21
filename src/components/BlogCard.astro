@@ -1,0 +1,116 @@
+---
+// Tarjeta de entrada del blog (Figma: grupos «Nuestro Blog» de Inicio y barra lateral de Blog).
+// Ocupa todo el ancho de su columna: el contenedor (grid) decide el tamaño.
+import { Image } from 'astro:assets';
+import type { CollectionEntry } from 'astro:content';
+import { rutas } from '../data/sitio';
+import { formatDate } from '../data/blog';
+
+interface Props {
+  post: CollectionEntry<'blog'>;
+  /** Versión algo más pequeña para la barra lateral del artículo. */
+  compact?: boolean;
+}
+
+const { post, compact = false } = Astro.props;
+const { title, date, excerpt, image, imageAlt } = post.data;
+const href = `${rutas.blog}/${post.id}`;
+const sizes = compact
+  ? '(max-width: 900px) min(100vw - 32px, 560px), 360px'
+  : '(max-width: 600px) calc(100vw - 32px), (max-width: 1100px) 50vw, 400px';
+---
+<article class:list={['blog-card', { compact }]}>
+  <a class="foto" href={href} tabindex="-1" aria-hidden="true">
+    <Image src={image} alt={imageAlt} widths={[400, 800]} sizes={sizes} format="webp" loading="lazy" />
+  </a>
+  <div class="cuerpo">
+    <time datetime={date.toISOString().slice(0, 10)}>{formatDate(date)}</time>
+    <h3><a href={href}>{title}</a></h3>
+    <p class="resumen">{excerpt}</p>
+    <a class="leer" href={href}>Leer más<span class="sr-only">: {title}</span></a>
+  </div>
+</article>
+
+<style>
+  .blog-card {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .foto {
+    display: block;
+    overflow: hidden;
+    border-radius: 10px;
+    aspect-ratio: 380 / 240;
+  }
+  .foto :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s;
+  }
+  .blog-card:hover .foto :global(img) {
+    transform: scale(1.03);
+  }
+  .cuerpo {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    padding: 18px 7px 0;
+  }
+  time {
+    font-size: 13px;
+    line-height: 1.43;
+    color: #737373; /* Figma: rgba(0,0,0,.31), oscurecido por contraste */
+  }
+  h3 {
+    margin: 14px 0 0;
+    font-weight: 500;
+    font-size: clamp(17px, 0.92vw, 17.64px);
+    line-height: 1.25;
+    color: var(--azul-900);
+  }
+  h3 a {
+    text-decoration: none;
+  }
+  h3 a:hover {
+    text-decoration: underline;
+  }
+  .resumen {
+    margin: 14px 0 0;
+    font-size: clamp(14px, 0.68vw, 15px);
+    line-height: 1.5;
+    color: #7c7c7c;
+  }
+  .leer {
+    align-self: flex-start;
+    margin-top: auto;
+    padding-top: 14px;
+    font-size: clamp(15px, 0.82vw, 15.7px);
+    letter-spacing: 0.03em;
+    color: var(--rojo);
+    text-decoration: none;
+  }
+  .leer:hover {
+    text-decoration: underline;
+  }
+
+  .compact .foto {
+    border-radius: 9px;
+    aspect-ratio: 355 / 225;
+  }
+  .compact .cuerpo {
+    padding-top: 14px;
+  }
+  .compact h3 {
+    margin-top: 12px;
+    font-size: 16.5px;
+  }
+  .compact .resumen {
+    margin-top: 12px;
+    font-size: 13px;
+  }
+  .compact .leer {
+    font-size: 14.7px;
+  }
+</style>

@@ -1,0 +1,130 @@
+---
+import { Image } from 'astro:assets';
+import { rutas } from '../../data/sitio';
+import ckOido from '../../assets/home/producto-ck-oido.jpg';
+import ckOidoSuave from '../../assets/home/producto-ck-oido-suave.png';
+import sincerax from '../../assets/home/producto-sincerax.jpg';
+
+// Posición de cada foto dentro de la tarjeta de 396×466 (en % del Figma)
+const productos = [
+  {
+    nombre: 'CK Oído gotas uso tópico 15 ml',
+    href: rutas.producto,
+    img: ckOido,
+    alt: 'Frasco de gotas CK Oído uso tópico de 15 ml',
+    pos: { left: '27.40%', top: '4.34%', width: '37.01%', height: '81.62%' },
+  },
+  {
+    nombre: 'CK Oído Suave gotas uso tópico 15 ml',
+    href: rutas.producto,
+    img: ckOidoSuave,
+    alt: 'Frasco de gotas CK Oído Suave uso tópico de 15 ml',
+    pos: { left: '23.50%', top: '8.02%', width: '58.56%', height: '77.94%' },
+  },
+  {
+    nombre: 'Sincerax removedor de cerumen',
+    href: rutas.sincerax,
+    img: sincerax,
+    alt: 'Caja de Sincerax, solución removedora de cerumen',
+    pos: { left: '8.76%', top: '11.64%', width: '83.31%', height: '70.69%' },
+  },
+];
+---
+<section class="productos container" aria-labelledby="productos-titulo">
+  <h2 id="productos-titulo">Nuestros productos</h2>
+  <p class="intro">
+    Nos hemos convertido en la gran solución para evitar la mayoría de infecciones del oído externo. Nuestros
+    consumidores han encontrado en CK Oído la respuesta que tanto buscaban. Nuestros clientes satisfechos han
+    experimentado un alivio inmediato, gracias a la fórmula especializada que combate la humedad generada en el oído,
+    al mismo tiempo que lubrica. Adiós a la sensación de oído húmedo con CK Oído.
+  </p>
+
+  <ul class="lista">
+    {productos.map((p) => (
+      <li>
+        <a class="tarjeta" href={p.href}>
+          <Image
+            class="foto"
+            src={p.img}
+            alt={p.alt}
+            format="webp"
+            widths={[240, 400, 640]}
+            sizes="(max-width: 640px) 70vw, (max-width: 960px) 30vw, 17vw"
+            style={p.pos}
+          />
+          <span class="sr-only">{p.nombre}</span>
+        </a>
+      </li>
+    ))}
+  </ul>
+
+  <div class="mas">
+    <a class="btn" href={rutas.producto}>Saber más</a>
+  </div>
+</section>
+
+<style>
+  .productos {
+    padding-top: clamp(56px, 5vw, 97px);
+    padding-bottom: clamp(64px, 8.4vw, 161px);
+    text-align: center;
+  }
+
+  h2 {
+    margin: 0;
+    font-weight: 700;
+    font-size: clamp(28px, 2.08vw, 40px);
+    line-height: 1.21;
+    color: var(--azul-900);
+  }
+
+  .intro {
+    max-width: 1648px;
+    margin: clamp(20px, 2.8vw, 54px) auto 0;
+    font-size: clamp(15px, 0.885vw, 17px);
+    line-height: 1.602;
+    color: var(--texto);
+  }
+
+  /* 3 tarjetas de 396px con 26px de separación, centradas (1240px) */
+  .lista {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 396px));
+    justify-content: center;
+    gap: clamp(16px, 1.37vw, 26px);
+    margin: clamp(32px, 2.85vw, 55px) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .tarjeta {
+    position: relative;
+    display: block;
+    aspect-ratio: 395.64 / 465.99;
+    border: 1px solid rgba(34, 103, 180, 0.24);
+    border-radius: 20px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.3) 100%), #fff;
+    box-shadow: 3px 4px 20px rgba(4, 116, 186, 0.1);
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .tarjeta:hover {
+    transform: translateY(-4px);
+    box-shadow: 3px 10px 28px rgba(4, 116, 186, 0.18);
+  }
+
+  .foto {
+    position: absolute;
+    object-fit: contain;
+  }
+
+  .mas {
+    margin-top: clamp(32px, 2.8vw, 54px);
+  }
+
+  @media (max-width: 640px) {
+    .lista {
+      grid-template-columns: minmax(0, 320px);
+    }
+  }
+</style>

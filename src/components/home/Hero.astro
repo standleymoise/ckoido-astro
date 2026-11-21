@@ -1,0 +1,144 @@
+---
+import { Image } from 'astro:assets';
+import { comprarHref } from '../../data/sitio';
+import fondo from '../../assets/home/hero-fondo.jpg';
+---
+<section class="hero" aria-labelledby="hero-titulo">
+  <Image
+    class="fondo"
+    src={fondo}
+    alt=""
+    format="webp"
+    widths={[768, 1280, 1920, 2129]}
+    sizes="100vw"
+    loading="eager"
+    fetchpriority="high"
+  />
+  <div class="capa" aria-hidden="true"></div>
+
+  <div class="contenido container">
+    <p class="kicker">Cuidado que se siente</p>
+    <h1 id="hero-titulo">
+      <strong>Productos número #1 para prevenir</strong>
+      <span>infecciones en los oídos</span>
+    </h1>
+    <ul class="puntos">
+      <li>Soluciones tópicas diseñadas para el cuidado e higiene natural del oído</li>
+      <li>Elimina la humedad atrapada en el oído después de nadar, bañarte o hacer algún deporte acuático</li>
+    </ul>
+    <a class="btn" href={comprarHref}>Comprar ahora</a>
+    <p class="sr-only">Caja y frasco de gotas CK Oído uso tópico de 15 ml sobre una base de mármol junto al mar.</p>
+  </div>
+</section>
+
+<style>
+  /* Medidas del Figma (1920px): banda de 665px con esquinas inferiores de 100px */
+  .hero {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border-radius: 0 0 clamp(40px, 5.2vw, 100px) clamp(40px, 5.2vw, 100px);
+    min-height: clamp(520px, 34.64vw, 665px);
+    display: flex;
+  }
+
+  .fondo {
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 70% center;
+  }
+
+  .capa {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(72.66deg, rgba(255, 255, 255, 0.76) 43.38%, rgba(255, 255, 255, 0) 65.41%);
+  }
+
+  .contenido {
+    /* 125px de aire arriba; abajo dejamos sitio a la barra de beneficios (64px solapados) */
+    padding-block: clamp(48px, 6.5vw, 125px) clamp(120px, 9.8vw, 188px);
+  }
+
+  .kicker {
+    display: inline-block;
+    margin: 0 0 clamp(12px, 0.8vw, 15px);
+    padding-bottom: 1px;
+    border-bottom: 1px solid var(--rojo);
+    font-weight: 500;
+    font-size: clamp(16px, 1.04vw, 20px);
+    line-height: 1.602;
+    color: #094d8e;
+  }
+
+  h1 {
+    margin: 0;
+    max-width: 760px;
+    font-size: clamp(28px, 2.14vw, 41px);
+    line-height: 1.2;
+    color: #085294;
+  }
+  h1 strong {
+    display: block;
+    font-weight: 800;
+  }
+  h1 span {
+    display: block;
+    font-weight: 500;
+  }
+
+  .puntos {
+    margin: clamp(16px, 1.05vw, 20px) 0 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: clamp(12px, 1.4vw, 27px);
+    max-width: 630px;
+  }
+  .puntos li {
+    position: relative;
+    padding-left: 33px;
+    font-weight: 500;
+    font-size: clamp(16px, 0.94vw, 18px);
+    line-height: 1.21;
+    color: #085294;
+  }
+  .puntos li::before {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: 0.35em;
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: var(--rojo);
+  }
+
+  .btn {
+    margin-top: clamp(28px, 2.1vw, 40px);
+  }
+
+  /* Móvil: el texto arriba y la foto (con el frasco) visible debajo */
+  @media (max-width: 760px) {
+    .hero {
+      flex-direction: column;
+      min-height: 0;
+      background: #eef5fd;
+    }
+    .fondo {
+      position: relative;
+      inset: auto;
+      z-index: 0;
+      order: 2;
+      height: 300px;
+      object-position: 72% 40%;
+    }
+    .capa {
+      display: none;
+    }
+  }
+</style>

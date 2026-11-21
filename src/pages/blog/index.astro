@@ -1,0 +1,58 @@
+---
+import Base from '../../layouts/Base.astro';
+import Header from '../../components/Header.astro';
+import PageTitle from '../../components/PageTitle.astro';
+import BlogCard from '../../components/BlogCard.astro';
+import Newsletter from '../../components/Newsletter.astro';
+import Footer from '../../components/Footer.astro';
+import { getPosts } from '../../data/blog';
+
+// No hay frame de Figma para el listado: se reutiliza la rejilla «Nuestro Blog» de Inicio.
+const posts = await getPosts();
+---
+<Base title="Blog | CK Oído" description="Consejos y novedades de CK Oído para cuidar sus oídos antes y después del agua.">
+  <Header />
+  <main>
+    <PageTitle title="Blog" />
+    <section class="listado container" aria-labelledby="blog-listado">
+      <h2 id="blog-listado" class="sr-only">Artículos</h2>
+      <ul class="grid">
+        {posts.map((post) => (
+          <li><BlogCard post={post} /></li>
+        ))}
+      </ul>
+    </section>
+    <Newsletter />
+  </main>
+  <Footer />
+</Base>
+
+<style>
+  .listado {
+    padding-top: clamp(40px, 4vw, 78px);
+  }
+  .grid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: clamp(40px, 3.3vw, 64px) clamp(24px, 2.5vw, 48px);
+  }
+  .grid li {
+    display: flex;
+  }
+  .grid li > :global(*) {
+    flex: 1;
+  }
+  @media (max-width: 1100px) {
+    .grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (max-width: 600px) {
+    .grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

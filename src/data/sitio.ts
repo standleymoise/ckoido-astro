@@ -43,11 +43,11 @@ export const redes = [
 ];
 
 export const farmacias = [
-  { nombre: 'Farmacia Santa Lucia', telefono: '+506 8711 0404' },
+  { nombre: 'Farmacia Santa Lucía', telefono: '+506 8711 0404' },
   { nombre: 'Farmacia Sucre', telefono: '+506 8646 5050' },
 ];
 
-export const direccion = 'Roleisa Farmaceutica SA. San José, Costa Rica';
+export const direccion = 'Roleisa Farmacéutica S.A. San José, Costa Rica';
 
 export const telHref = (tel: string) => `tel:${tel.replace(/\s+/g, '')}`;
 

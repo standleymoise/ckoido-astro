@@ -1,0 +1,150 @@
+---
+import Base from '../layouts/Base.astro';
+import Header from '../components/Header.astro';
+import PageTitle from '../components/PageTitle.astro';
+import SplitSection from '../components/SplitSection.astro';
+import PromoBanner from '../components/PromoBanner.astro';
+import BandaAzul from '../components/otitis/BandaAzul.astro';
+import Footer from '../components/Footer.astro';
+import { rutas } from '../data/sitio';
+import fotoCausas from '../assets/otitis/causas.jpg';
+import fotoNoNadan from '../assets/otitis/no-nadan.png';
+import fotoSintomas from '../assets/otitis/sintomas.png';
+import fotoDuracion from '../assets/otitis/duracion.png';
+import fotoMedico from '../assets/otitis/medico.png';
+import fotoPareja from '../assets/otitis/pareja-mayor.png';
+---
+<Base
+  title="Otitis externa | CK Oído"
+  description="Qué es la otitis externa (oído de nadador), sus causas, síntomas, duración, cuándo llamar al médico y cómo prevenirla."
+>
+  <Header />
+  <main class="otitis">
+    <PageTitle title="Otitis externa" />
+
+    <SplitSection
+      image={fotoCausas}
+      alt="Mujer con gesto de dolor sosteniéndose la cabeza junto al oído"
+      title="¿Qué es y cuáles son las causas de la otitis externa?"
+      priority
+    >
+      <p>
+        La otitis externa es una infección del conducto auditivo y la pueden causar varios tipos diferentes de
+        bacterias o de hongos.
+      </p>
+      <p>
+        La otitis externa (oído de nadador u otitis del nadador) se suele desarrollar dentro de los oídos que se
+        exponen a la humedad. La gente que la contrae suele haber estado en piscinas, en el mar, buceando, nadando e
+        inclusive durante el baño diario. Otras personas también adquieren esta infección porque viven en lugares con
+        mucha humedad; lo anterior puede ocasionar que les entren gérmenes en el conducto auditivo. La otitis externa
+        ocurre más a menudo durante los meses de verano, cuando hay más gente que disfruta de las actividades
+        acuáticas; sin embargo, en países tropicales donde la humedad es muy alta, puede presentarse en cualquier
+        época del año.
+      </p>
+      <a class="btn" href={rutas.contacto}>Contáctanos</a>
+    </SplitSection>
+
+    <BandaAzul>
+      <SplitSection
+        id="no-nadan"
+        image={fotoNoNadan}
+        alt="Hombre limpiándose el oído con un bastoncillo de algodón"
+        title="¿Las personas que no nadan también pueden ser afectadas?"
+        tone="dark"
+        reverse
+        ratio="789 / 346"
+        padded={false}
+      >
+        <p>
+          Las personas que no nadan también se pueden ver afectadas por una otitis externa al rascarse la piel del
+          conducto auditivo cuando tratan de limpiarse los oídos. Esto puede ocurrir, sobre todo, cuando usan las
+          uñas, aplicadores de algodón u otros objetos pequeños y afilados, como las horquillas y los clips.
+        </p>
+      </SplitSection>
+
+      <SplitSection
+        id="sintomas"
+        image={fotoSintomas}
+        alt="Mujer tocándose la oreja por molestias en el oído"
+        title="¿Cuáles son los signos y los síntomas de la otitis externa?"
+        tone="dark"
+        ratio="789 / 421"
+        padded={false}
+      >
+        <p>
+          El principal síntoma de la otitis externa es un dolor de oído intenso, que empeora cuando se tira de la
+          parte más externa del oído o se ejerce presión sobre ella. A veces, el conducto auditivo pica antes de que
+          empiece a doler.
+        </p>
+        <p>
+          Es posible que el oído externo se ponga rojo o se hinche. Los ganglios linfáticos que hay alrededor del
+          oído pueden aumentar de tamaño y molestar. A veces, hay una supuración amarillento-verdosa de pus en la
+          abertura del oído. Si el pus o la inflamación del conducto auditivo obstruyen el paso del sonido a través
+          del oído, puede resultar difícil oír con el oído infectado.
+        </p>
+      </SplitSection>
+    </BandaAzul>
+
+    <SplitSection
+      image={fotoDuracion}
+      alt="Hombre con molestias en el oído apoyando la cabeza en la mano"
+      title="¿Cuánto dura la otitis externa?"
+      reverse
+      ratio="789 / 346"
+    >
+      <p>
+        Al usar el tratamiento indicado por el médico, el oído del nadador se cura en 7 a 10 días. El dolor debería
+        disminuir a los pocos días de iniciar el tratamiento. La otitis externa no es contagiosa. O sea que no tienes
+        que limitar el contacto con tus amigos, siempre y cuando te encuentres lo bastante bien como para socializar.
+      </p>
+    </SplitSection>
+
+    <SplitSection
+      image={fotoMedico}
+      alt="Médica revisando el oído de una paciente sonriente"
+      title="¿Cuándo debo llamar al médico?"
+      ratio="789 / 360"
+    >
+      <p>Llama al médico si presentas alguno de los siguientes síntomas:</p>
+      <ol>
+        <li>Dolor en el oído, con o sin fiebre</li>
+        <li>Picazón continua en el oído o en el canal auditivo</li>
+        <li>Pérdida de la audición o disminución de la audición en un oído o en ambos</li>
+        <li>Supuración (secreción) en uno o ambos oídos</li>
+      </ol>
+    </SplitSection>
+
+    <PromoBanner
+      image={fotoPareja}
+      imagePosition="50% 30%"
+      imageStart="39%"
+      gradient="linear-gradient(101.6deg, rgb(10, 69, 132) 43.8%, rgba(10, 69, 133, 0) 74.9%)"
+      ctaLabel="Contáctenos" ctaHref={rutas.contacto}>
+      <h2>¿Se puede prevenir la otitis externa?</h2>
+      <p>
+        Puedes prevenir la otitis externa utilizando CK Oído en los oídos después del baño diario, después de nadar o
+        cada vez que lo sientas húmedo. NO introduzcas nada dentro de los oídos, incluyendo la uña, papel higiénico,
+        servilletas de papel, los bastoncillos de algodón (hisopos) o cotonoides.
+      </p>
+    </PromoBanner>
+  </main>
+  <Footer />
+</Base>
+
+<style>
+  /* Recortes de las fotos de la banda azul según el Figma. */
+  :global(#no-nadan .foto img) {
+    object-position: 50% 76%;
+  }
+  :global(#sintomas .foto img) {
+    object-position: 50% 85%;
+  }
+  .otitis :global(.cuerpo ol) {
+    margin: 0;
+    padding-left: 1.5em;
+  }
+  /* Títulos de 37px en el Figma (frente a los 40px por defecto). */
+  .otitis :global(.split .texto h2) {
+    font-size: clamp(24px, 1.93vw, 37px);
+  }
+</style>

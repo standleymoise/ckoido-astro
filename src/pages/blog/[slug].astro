@@ -1,0 +1,146 @@
+---
+import { Image } from 'astro:assets';
+import { render } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import Header from '../../components/Header.astro';
+import PageTitle from '../../components/PageTitle.astro';
+import BlogCard from '../../components/BlogCard.astro';
+import Footer from '../../components/Footer.astro';
+import { getPosts, formatDate, type Post } from '../../data/blog';
+
+export async function getStaticPaths() {
+  const posts = await getPosts();
+  return posts.map((post) => ({
+    params: { slug: post.id },
+    // Barra lateral: las 3 entradas más recientes distintas de la actual.
+    props: { post, otros: posts.filter((p) => p.id !== post.id).slice(0, 3) },
+  }));
+}
+
+interface Props {
+  post: Post;
+  otros: Post[];
+}
+
+const { post, otros } = Astro.props;
+const { title, date, excerpt, image, imageAlt } = post.data;
+const { Content } = await render(post);
+---
+<Base title={`${title} | Blog CK Oído`} description={excerpt}>
+  <Header />
+  <main>
+    <PageTitle title="Blog" />
+    <div class="layout container">
+      <article class="articulo">
+        <Image
+          class="hero"
+          src={image}
+          alt={imageAlt}
+          widths={[600, 900, 1200, 1800]}
+          sizes="(max-width: 1000px) calc(100vw - 32px), 62vw"
+          format="webp"
+          loading="eager"
+          fetchpriority="high"
+        />
+        <time datetime={date.toISOString().slice(0, 10)}>{formatDate(date)}</time>
+        <h1>{title}</h1>
+        <div class="contenido">
+          <Content />
+        </div>
+      </article>
+
+      {otros.length > 0 && (
+        <aside class="lateral" aria-labelledby="otros-articulos">
+          <h2 id="otros-articulos" class="sr-only">Otros artículos</h2>
+          <ul>
+            {otros.map((p) => (
+              <li><BlogCard post={p} compact /></li>
+            ))}
+          </ul>
+        </aside>
+      )}
+    </div>
+  </main>
+  <Footer />
+</Base>
+
+<style>
+  /* Figma (1920): artículo 1175px + lateral 355px, separados ~141px */
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1175fr) minmax(260px, 355px);
+    gap: clamp(40px, 7.3vw, 141px);
+    align-items: start;
+    padding-block: clamp(40px, 4.05vw, 78px) clamp(56px, 4.6vw, 88px);
+  }
+  .hero {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1175 / 685;
+    object-fit: cover;
+    border-radius: clamp(16px, 1.66vw, 32px);
+  }
+  time {
+    display: block;
+    margin-top: clamp(28px, 3.1vw, 60px);
+    font-weight: 500;
+    font-size: clamp(15px, 0.95vw, 18.3px);
+    line-height: 1.43;
+    color: #4c4c4c;
+  }
+  h1 {
+    margin: clamp(10px, 0.9vw, 16px) 0 0;
+    font-weight: 600;
+    font-size: clamp(22px, 1.36vw, 26.15px);
+    line-height: 1.35;
+    letter-spacing: -0.05em;
+    color: var(--azul-900);
+  }
+  .contenido {
+    margin-top: clamp(8px, 0.5vw, 10px);
+    font-size: clamp(17px, 1.09vw, 20.92px);
+    line-height: 1.75;
+    color: rgba(48, 48, 48, 0.78);
+  }
+  .contenido :global(h2),
+  .contenido :global(h3) {
+    margin: 0 0 0.6em;
+    font-weight: 600;
+    font-size: 1em;
+    line-height: 1.75;
+  }
+  .contenido :global(h3) {
+    font-size: 0.95em;
+  }
+  .contenido :global(p) {
+    margin: 0;
+  }
+  .contenido :global(p + p) {
+    margin-top: 0.15em;
+  }
+  .contenido :global(a) {
+    color: var(--azul-600);
+  }
+  .contenido :global(ul),
+  .contenido :global(ol) {
+    margin: 0.5em 0;
+    padding-left: 1.3em;
+  }
+
+  .lateral ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: clamp(32px, 2.3vw, 44px);
+  }
+
+  @media (max-width: 1000px) {
+    .layout {
+      grid-template-columns: 1fr;
+    }
+    .lateral ul {
+      grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+    }
+  }
+</style>

@@ -1,0 +1,194 @@
+---
+import { Image } from 'astro:assets';
+import { comprarHref, rutas } from '../../data/sitio';
+import fotoProducto from '../../assets/home/acerca-producto.jpg';
+import fotoNadador from '../../assets/home/acerca-nadador.jpg';
+import fotoPiscina from '../../assets/home/acerca-piscina.jpg';
+---
+<section class="acerca container" aria-labelledby="acerca-titulo">
+  <div class="collage">
+    <Image
+      class="foto producto"
+      src={fotoProducto}
+      alt="Caja y frasco de gotas CK Oído junto al mar"
+      format="webp"
+      widths={[360, 480, 720, 847]}
+      sizes="(max-width: 960px) 60vw, 25vw"
+    />
+    <Image
+      class="foto nadador"
+      src={fotoNadador}
+      alt="Nadador con gorro y gafas respirando en plena brazada"
+      format="webp"
+      widths={[240, 360, 560, 856]}
+      sizes="(max-width: 960px) 36vw, 15vw"
+    />
+    <Image
+      class="foto piscina"
+      src={fotoPiscina}
+      alt="Grupo de amigos divirtiéndose en una piscina"
+      format="webp"
+      widths={[320, 480, 720, 1060]}
+      sizes="(max-width: 960px) 55vw, 23vw"
+    />
+    <img class="deco deco-1" src="/img/home/deco-circulos-1.svg" alt="" width="133" height="104" loading="lazy" />
+    <span class="deco deco-2" aria-hidden="true">
+      <img src="/img/home/deco-circulos-2.svg" alt="" width="66" height="148" loading="lazy" />
+    </span>
+    <span class="deco punto" aria-hidden="true"></span>
+    <span class="deco aro" aria-hidden="true"></span>
+  </div>
+
+  <div class="texto">
+    <h2 id="acerca-titulo">Acerca de CK Oído</h2>
+    <p>
+      CK Oído ayuda a secar el agua atrapada en sus oídos, eliminando la incomodidad que produce el sentir el oído
+      con agua. CK Oído está formulado con un agente hidratante único que ayuda a secar rápidamente el exceso de agua,
+      al mismo tiempo que acondiciona el delicado forro del canal auditivo, convirtiéndolo en un producto seguro y
+      eficaz.
+    </p>
+    <p>
+      CK Oído es ideal para usar después de: nadar, bañarse, bucear, surf y otras actividades relacionadas con el
+      agua. CK Oído después de utilizar audífonos por períodos largos (más de 30 minutos) previene las infecciones, ya
+      que mantiene los oídos secos al mismo tiempo que evita la entrada de humedad al audífono, lo que evita que se
+      dañe. Un producto de gran utilidad en lugares que son muy húmedos o países tropicales, ya que controla la
+      humedad que se genera diariamente en el oído.
+    </p>
+    <div class="acciones">
+      <a class="btn" href={comprarHref}>Comprar ahora</a>
+      <a class="btn btn-borde" href={rutas.nosotros}>Más de nosotros</a>
+    </div>
+  </div>
+</section>
+
+<style>
+  /* Collage 772×715 y texto 774px, separados 129px (Figma 1920) */
+  .acerca {
+    display: grid;
+    grid-template-columns: minmax(0, 772fr) minmax(0, 774fr);
+    align-items: center;
+    column-gap: clamp(40px, 6.7vw, 129px);
+    row-gap: 48px;
+    padding-top: clamp(56px, 7.1vw, 137px);
+  }
+
+  .collage {
+    position: relative;
+    container-type: inline-size;
+    aspect-ratio: 771.63 / 714.45;
+  }
+
+  .foto {
+    position: absolute;
+    object-fit: cover;
+  }
+  .producto {
+    left: 0;
+    top: 0;
+    width: 60.98%;
+    height: 61.04%;
+    border-radius: 5.57cqw;
+  }
+  .nadador {
+    left: 63.64%;
+    top: 20.13%;
+    width: 36.36%;
+    height: 39.38%;
+    border-radius: 6.48cqw;
+  }
+  .piscina {
+    left: 26.99%;
+    top: 62.69%;
+    width: 54.97%;
+    height: 37.31%;
+    border-radius: 6.48cqw;
+  }
+
+  .deco {
+    position: absolute;
+  }
+  .deco-1 {
+    left: 65.04%;
+    top: 2.42%;
+    width: 17.2%;
+    height: auto;
+  }
+  .deco-2 {
+    left: 2.09%;
+    top: 69.57%;
+    width: 20.71%;
+    height: 14.23%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .deco-2 img {
+    flex: none;
+    width: 8.5cqw;
+    height: auto;
+    transform: rotate(-75deg);
+  }
+  .punto {
+    left: 86.16%;
+    top: 72.51%;
+    width: 2.24%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: var(--rojo);
+  }
+  .aro {
+    left: 88.39%;
+    top: 65.26%;
+    width: 4.48%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    border: 3px solid var(--azul-900);
+  }
+
+  h2 {
+    margin: 0 0 clamp(24px, 3.4vw, 64px);
+    font-weight: 700;
+    font-size: clamp(28px, 2.08vw, 40px);
+    line-height: 1.21;
+    color: var(--azul-900);
+  }
+
+  .texto p {
+    margin: 0;
+    font-size: clamp(15px, 0.885vw, 17px);
+    line-height: 1.602;
+    color: var(--texto);
+  }
+  .texto p + p {
+    margin-top: clamp(20px, 1.93vw, 37px);
+  }
+
+  .acciones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px clamp(16px, 1.48vw, 28px);
+    margin-top: clamp(32px, 3.5vw, 66px);
+  }
+
+  .btn-borde {
+    background: transparent;
+    color: var(--azul-900);
+    border-color: var(--azul-900);
+    font-weight: 800;
+  }
+  .btn-borde:hover {
+    background: var(--azul-900);
+    border-color: var(--azul-900);
+    color: #fff;
+  }
+
+  @media (max-width: 960px) {
+    .acerca {
+      grid-template-columns: 1fr;
+    }
+    .collage {
+      width: min(100%, 560px);
+      margin-inline: auto;
+    }
+  }
+</style>
