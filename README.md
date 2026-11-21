@@ -30,13 +30,15 @@ Menú, redes sociales, teléfonos y dirección: `src/data/sitio.ts`.
 
 Los formularios de **Contacto** y **Boletín** envían a [Formspree](https://formspree.io) sin salir de la página.
 
-1. Crear una cuenta en Formspree y un formulario (o dos: uno para contacto y otro para el boletín).
+1. Crear los dos formularios abriendo estos enlaces (piden iniciar sesión o crear la cuenta en Formspree, y crean el formulario con sus campos ya validados):
+   - [Contacto](https://formspree.io/claim?name=CK+O%C3%ADdo+%E2%80%93+Contacto&project=CK+O%C3%ADdo&field.nombre=text,required,maxlength:100&field.apellidos=text,maxlength:100&field.email=email,required&field.telefono=text,maxlength:30&field.mensaje=text,required,maxlength:5000&field.formulario=text,maxlength:30)
+   - [Boletín](https://formspree.io/claim?name=CK+O%C3%ADdo+%E2%80%93+Bolet%C3%ADn&project=CK+O%C3%ADdo&field.email=email,required&field.formulario=text,maxlength:30)
 2. Copiar el ID del formulario: es la parte final de la URL `https://formspree.io/f/<ID>`.
 3. Copiar `.env.example` como `.env` y completarlo (o definir las mismas variables en el hosting):
 
    ```env
    PUBLIC_FORMSPREE_CONTACTO=<ID>
-   PUBLIC_FORMSPREE_BOLETIN=<ID>   # opcional: si se deja vacío, usa el de contacto
+   PUBLIC_FORMSPREE_BOLETIN=<ID>
    ```
 
 4. Volver a ejecutar `npm run build` (los IDs se incluyen al construir el sitio).
