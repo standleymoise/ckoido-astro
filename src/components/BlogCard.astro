@@ -21,7 +21,7 @@ const sizes = compact
 ---
 <article class:list={['blog-card', { compact }]}>
   <a class="foto" href={href} tabindex="-1" aria-hidden="true">
-    <Image src={image} alt={imageAlt} widths={[400, 800]} sizes={sizes} format="webp" loading="lazy" />
+    <Image src={image} inferSize={typeof image === 'string'} alt={imageAlt} widths={[400, 800]} sizes={sizes} format="webp" loading="lazy" />
   </a>
   <div class="cuerpo">
     <time datetime={date.toISOString().slice(0, 10)}>{formatDate(date)}</time>

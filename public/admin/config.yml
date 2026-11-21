@@ -46,7 +46,8 @@ collections:
       default:
         field: date
         direction: descending
-    preview_path: blog/{{slug}}
+    # Ruta absoluta: el sitio vive en /ckoido-astro (GitHub Pages).
+    preview_path: /ckoido-astro/blog/{{slug}}/
     fields:
       - name: title
         label: Título
@@ -63,7 +64,7 @@ collections:
       - name: image
         label: Imagen principal
         widget: image
-        hint: Foto horizontal, idealmente de 1200 px de ancho o más.
+        hint: Foto horizontal, idealmente de 1200 px de ancho o más. Mejor subirla que pegar un enlace externo (si el sitio externo la borra, desaparece).
       - name: imageAlt
         label: Descripción de la imagen
         widget: string

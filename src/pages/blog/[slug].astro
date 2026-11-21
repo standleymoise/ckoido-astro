@@ -35,6 +35,7 @@ const { Content } = await render(post);
         <Image
           class="hero"
           src={image}
+          inferSize={typeof image === 'string'}
           alt={imageAlt}
           widths={[600, 900, 1200, 1800]}
           sizes="(max-width: 1000px) calc(100vw - 32px), 62vw"
