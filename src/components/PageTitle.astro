@@ -1,0 +1,43 @@
+---
+interface Props {
+  title: string;
+}
+const { title } = Astro.props;
+---
+<section class="page-title">
+  <img class="ondas" src="/img/ondas-titulo.svg" alt="" aria-hidden="true" />
+  <div class="container">
+    <h1>{title}</h1>
+  </div>
+</section>
+
+<style>
+  .page-title {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    min-height: clamp(96px, 7.35vw, 141px);
+    border-top: 1px solid var(--borde);
+    background: linear-gradient(0deg, var(--celeste), var(--blanco-76));
+  }
+  .ondas {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 71.2%;
+    height: 100%;
+    pointer-events: none;
+  }
+  .container {
+    position: relative;
+  }
+  h1 {
+    margin: 0;
+    /* En el Figma el título va 72px más adentro que el contenido */
+    padding-left: clamp(0px, 3.75vw, 72px);
+    font-weight: 600;
+    font-size: clamp(28px, 2.08vw, 40px);
+    color: var(--azul-850);
+  }
+</style>

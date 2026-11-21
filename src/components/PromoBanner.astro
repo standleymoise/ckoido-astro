@@ -1,0 +1,122 @@
+---
+// Banner "Group 1000007192" (Figma node 170:104): foto de viaje + degradado azul.
+import { Image } from 'astro:assets';
+import fotoBanner from '../assets/banner-viaje.png';
+
+interface Props {
+  kicker?: string;
+  title?: string;
+  highlight?: string;
+  ctaLabel?: string;
+  ctaHref?: string;
+}
+const {
+  kicker = 'Lleve las gotas a todos lados',
+  title = 'Disfrute al máximo.',
+  highlight = 'La prevención está en sus manos',
+  ctaLabel = 'Comprar ahora',
+  ctaHref = '#',
+} = Astro.props;
+---
+<section class="promo" aria-labelledby="promo-titulo">
+  <div class="media" aria-hidden="true">
+    <Image
+      src={fotoBanner}
+      alt=""
+      widths={[640, 960, 1460, 1946]}
+      sizes="(max-width: 760px) 100vw, 76vw"
+      format="webp"
+      quality={80}
+      loading="lazy"
+    />
+  </div>
+  <div class="container contenido">
+    <p class="kicker">{kicker}</p>
+    <h2 id="promo-titulo">
+      <span class="titulo">{title}</span>
+      <strong>{highlight}</strong>
+    </h2>
+    <a class="btn" href={ctaHref}>{ctaLabel}</a>
+  </div>
+</section>
+
+<style>
+  .promo {
+    position: relative;
+    overflow: hidden;
+    background: var(--banner-azul);
+    color: #fff;
+    min-height: clamp(320px, 20.8vw, 400px);
+    display: flex;
+    align-items: center;
+  }
+
+  /* Figma: la foto ocupa el 75.92% derecho; degradado 106° de azul sólido (31.7%) a transparente (62.8%) */
+  .media {
+    position: absolute;
+    inset: 0 0 0 24.08%;
+  }
+  .media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 50% 30%;
+  }
+  .promo::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: linear-gradient(106.08deg, rgb(10, 69, 132) 31.666%, rgba(10, 69, 133, 0) 62.821%);
+    pointer-events: none;
+  }
+
+  .contenido {
+    position: relative;
+    z-index: 2;
+    padding-block: 40px;
+  }
+  .kicker {
+    margin: 0;
+    font-size: clamp(20px, 1.45vw, 27.77px);
+    line-height: 1.602;
+  }
+  h2 {
+    margin: 0 0 clamp(16px, 1.2vw, 23px);
+    font-weight: 400;
+    font-size: clamp(28px, 2.24vw, 42.99px);
+    line-height: 1.35;
+  }
+  h2 span,
+  h2 strong {
+    display: block;
+  }
+  h2 strong {
+    font-weight: 700;
+  }
+
+  /* Móvil: texto sobre azul y la foto abajo, fundida con el azul */
+  @media (max-width: 760px) {
+    .promo {
+      flex-direction: column;
+      align-items: stretch;
+      min-height: 0;
+    }
+    .contenido {
+      order: 1;
+      padding-block: 40px 24px;
+    }
+    .media {
+      order: 2;
+      position: relative;
+      inset: auto;
+      aspect-ratio: 4 / 3;
+    }
+    .media img {
+      object-position: 62% 30%;
+    }
+    .promo::before {
+      background: linear-gradient(180deg, rgb(10, 69, 132) 45%, rgba(10, 69, 133, 0) 72%);
+    }
+  }
+</style>

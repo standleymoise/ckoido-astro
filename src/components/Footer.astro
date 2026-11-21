@@ -1,0 +1,128 @@
+---
+import Logo from './Logo.astro';
+import { menuFooter, redes } from '../data/sitio';
+
+const year = new Date().getFullYear();
+---
+<footer class="footer">
+  <div class="container">
+    <div class="arriba">
+      <Logo size={232} />
+      <nav aria-label="Pie de página">
+        <ul class="links">
+          {menuFooter.map((m) => (
+            <li><a href={m.href}>{m.label}</a></li>
+          ))}
+        </ul>
+      </nav>
+    </div>
+
+    <div class="abajo">
+      <div class="legal">
+        <p>© {year} ckoido.com. All rights reserved.</p>
+        <p>
+          CK Oído respeta y apoya el criterio médico. CK Oído no sustituye ningún tratamiento médico pre establecido,
+          consulte con su médico antes de utilizar el producto.
+        </p>
+      </div>
+      <ul class="redes">
+        {redes.map((r) => (
+          <li>
+            <a href={r.href} aria-label={r.label}>
+              <img src={r.icon} alt="" width="40" height="40" />
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .footer {
+    border-top: 1px solid var(--borde);
+    background: linear-gradient(180deg, var(--celeste), var(--blanco-76));
+    color: var(--azul-900);
+    padding-block: clamp(36px, 2.9vw, 56px) clamp(32px, 3.4vw, 64px);
+  }
+  .arriba {
+    display: flex;
+    align-items: center;
+    gap: 32px 48px;
+    padding-left: clamp(0px, 1.2vw, 23px);
+    padding-bottom: clamp(28px, 2.9vw, 56px);
+    border-bottom: 1px solid rgba(4, 116, 186, 0.24);
+  }
+  nav {
+    flex: 1;
+    display: flex;
+    justify-content: flex-end;
+  }
+  .links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px clamp(24px, 2.4vw, 46px);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    /* En el Figma los links arrancan en x=558 y terminan antes del borde derecho */
+    margin-right: clamp(0px, 7vw, 150px);
+  }
+  .links a {
+    font-weight: 600;
+    font-size: clamp(15px, 0.96vw, 18.4px);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .links a:hover {
+    text-decoration: underline;
+  }
+
+  .abajo {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 24px;
+    padding-top: 14px;
+  }
+  .legal p {
+    margin: 0;
+    font-weight: 500;
+    font-size: clamp(13px, 0.8vw, 15.4px);
+    line-height: 1.786;
+  }
+  .redes {
+    flex: none;
+    display: flex;
+    gap: 14px;
+    margin: 0;
+    padding: 0 24px 0 0;
+    list-style: none;
+  }
+  .redes img {
+    width: 40px;
+    height: 40px;
+  }
+
+  @media (max-width: 1100px) {
+    .arriba {
+      flex-direction: column;
+      align-items: flex-start;
+      padding-left: 0;
+    }
+    nav {
+      justify-content: flex-start;
+    }
+    .links {
+      margin-right: 0;
+    }
+  }
+  @media (max-width: 640px) {
+    .abajo {
+      flex-direction: column-reverse;
+    }
+    .redes {
+      padding: 0;
+    }
+  }
+</style>

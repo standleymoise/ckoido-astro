@@ -1,0 +1,274 @@
+---
+import Logo from './Logo.astro';
+import { menu, redes, farmacias, telHref } from '../data/sitio';
+
+const current = Astro.url.pathname;
+---
+<header class="header">
+  <div class="topbar container">
+    <div class="redes">
+      <p class="redes-titulo">Nuestras redes</p>
+      <ul class="redes-lista">
+        {redes.map((r) => (
+          <li>
+            <a href={r.href} aria-label={r.label}>
+              <img src={r.icon} alt="" width="34" height="34" />
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+
+    <div class="logo-wrap">
+      <Logo size={184} />
+    </div>
+
+    <ul class="farmacias">
+      {farmacias.map((f) => (
+        <li>
+          <span class="farmacia-nombre">{f.nombre}:</span>
+          <a class="farmacia-tel" href={telHref(f.telefono)}>{f.telefono}</a>
+        </li>
+      ))}
+    </ul>
+
+    <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="menu-principal">
+      <span class="sr-only">Abrir menú</span>
+      <span class="bar"></span><span class="bar"></span><span class="bar"></span>
+    </button>
+  </div>
+
+  <nav class="nav" aria-label="Principal">
+    <div class="nav-inner container" id="menu-principal">
+      <ul class="nav-links">
+        {menu.map((m) => (
+          <li>
+            <a href={m.href} aria-current={m.href === current ? 'page' : undefined}>{m.label}</a>
+          </li>
+        ))}
+      </ul>
+      <a class="nav-cta" href="#">Comprar Ahora</a>
+    </div>
+  </nav>
+</header>
+
+<script>
+  const btn = document.querySelector<HTMLButtonElement>('.menu-toggle');
+  const nav = document.querySelector<HTMLElement>('.nav');
+  btn?.addEventListener('click', () => {
+    const open = btn.getAttribute('aria-expanded') === 'true';
+    btn.setAttribute('aria-expanded', String(!open));
+    nav?.classList.toggle('is-open', !open);
+  });
+</script>
+
+<style>
+  .topbar {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    min-height: 90px;
+    padding-block: 12px;
+  }
+
+  .redes-titulo {
+    margin: 0 0 8px;
+    font-family: var(--font-alt);
+    font-weight: 500;
+    font-size: 16px;
+    color: var(--morado);
+  }
+  .redes-lista {
+    display: flex;
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .redes-lista img {
+    width: 34px;
+    height: 34px;
+    transition: transform 0.2s;
+  }
+  .redes-lista a:hover img {
+    transform: translateY(-2px);
+  }
+
+  .logo-wrap {
+    justify-self: center;
+  }
+
+  .farmacias {
+    justify-self: end;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 2px;
+  }
+  .farmacias li {
+    display: flex;
+    justify-content: flex-end;
+    align-items: baseline;
+    gap: 6px;
+  }
+  .farmacia-nombre {
+    font-family: var(--font-alt);
+    font-weight: 500;
+    font-size: 12.3px;
+    color: var(--azul-800);
+  }
+  .farmacia-tel {
+    font-family: var(--font-alt);
+    font-weight: 800;
+    font-size: 15.4px;
+    color: var(--azul-900);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .farmacia-tel:hover {
+    text-decoration: underline;
+  }
+
+  .menu-toggle {
+    display: none;
+  }
+
+  .nav {
+    background: linear-gradient(90deg, var(--azul-900), var(--azul-600));
+  }
+  .nav-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    min-height: 59px;
+  }
+  .nav-links {
+    flex: 1;
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    margin: 0;
+    padding: 0 0 0 12px;
+    list-style: none;
+    max-width: 1340px;
+  }
+  .nav-links a {
+    font-weight: 500;
+    font-size: 16px;
+    color: #fff;
+    text-decoration: none;
+    white-space: nowrap;
+    padding-block: 6px;
+    border-bottom: 2px solid transparent;
+  }
+  .nav-links a:hover,
+  .nav-links a[aria-current='page'] {
+    border-bottom-color: rgba(255, 255, 255, 0.8);
+  }
+  .nav-cta {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    height: 42px;
+    padding: 0 22px;
+    border-radius: 30px;
+    background: var(--rojo);
+    color: #fff;
+    font-weight: 600;
+    font-size: 14.2px;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .nav-cta:hover {
+    background: #d11a43;
+  }
+
+  /* Tablet: ocultamos datos de farmacias del topbar para dar aire */
+  @media (max-width: 1180px) {
+    .nav-links a {
+      font-size: 14px;
+    }
+  }
+
+  @media (max-width: 960px) {
+    .topbar {
+      grid-template-columns: auto 1fr auto;
+      gap: 12px;
+      min-height: 72px;
+    }
+    .redes {
+      display: none;
+    }
+    .logo-wrap {
+      justify-self: start;
+      grid-column: 1;
+    }
+    .farmacias {
+      grid-column: 2;
+    }
+    .menu-toggle {
+      grid-column: 3;
+      display: inline-flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 5px;
+      width: 44px;
+      height: 44px;
+      padding: 10px;
+      border: 0;
+      border-radius: 10px;
+      background: var(--azul-900);
+      cursor: pointer;
+    }
+    .bar {
+      display: block;
+      height: 2px;
+      border-radius: 2px;
+      background: #fff;
+      transition: transform 0.2s, opacity 0.2s;
+    }
+    .menu-toggle[aria-expanded='true'] .bar:nth-child(2) {
+      transform: translateY(7px) rotate(45deg);
+    }
+    .menu-toggle[aria-expanded='true'] .bar:nth-child(3) {
+      opacity: 0;
+    }
+    .menu-toggle[aria-expanded='true'] .bar:nth-child(4) {
+      transform: translateY(-7px) rotate(-45deg);
+    }
+
+    .nav {
+      display: none;
+    }
+    .nav.is-open {
+      display: block;
+    }
+    .nav-inner {
+      flex-direction: column;
+      align-items: stretch;
+      padding-block: 12px 20px;
+    }
+    .nav-links {
+      flex-direction: column;
+      gap: 0;
+      padding: 0;
+    }
+    .nav-links a {
+      display: block;
+      padding-block: 12px;
+      font-size: 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    }
+    .nav-cta {
+      justify-content: center;
+    }
+  }
+
+  @media (max-width: 560px) {
+    .farmacias {
+      display: none;
+    }
+  }
+</style>

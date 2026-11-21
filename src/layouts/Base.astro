@@ -1,0 +1,125 @@
+---
+interface Props {
+  title: string;
+  description?: string;
+}
+const { title, description = 'CK Oído: gotas para secar el agua atrapada en el oído y prevenir infecciones del oído externo.' } = Astro.props;
+---
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sarabun:wght@500;800&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>
+
+<style is:global>
+  :root {
+    --azul-900: #0a4383;
+    --azul-850: #09498a;
+    --azul-800: #145297;
+    --azul-600: #0474ba;
+    --banner-azul: #0a4584;
+    --rojo: #ed2853;
+    --texto: #526377;
+    --morado: #342f69;
+    --celeste: rgba(225, 238, 255, 0.76);
+    --blanco-76: rgba(255, 255, 255, 0.76);
+    --borde: rgba(4, 116, 186, 0.29);
+
+    --font-sans: 'Inter', system-ui, sans-serif;
+    --font-alt: 'Sarabun', 'Inter', system-ui, sans-serif;
+
+    /* Ancho de contenido del Figma: 1665px dentro de 1920px */
+    --gutter: clamp(16px, 6.6vw, 128px);
+    --container: min(1666px, 100% - 2 * var(--gutter));
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    font-family: var(--font-sans);
+    color: var(--texto);
+    background: #fff;
+    overflow-x: hidden;
+  }
+
+  img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+  }
+
+  a {
+    color: inherit;
+  }
+
+  .container {
+    width: var(--container);
+    margin-inline: auto;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-alt);
+    font-weight: 500;
+    font-size: clamp(16px, 1.05vw, 20px);
+    line-height: 1.2;
+    color: #fff;
+    background: var(--rojo);
+    border: 1px solid var(--rojo);
+    border-radius: 30px;
+    padding: 17px 45px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s, transform 0.2s;
+  }
+
+  .btn:hover {
+    background: #d11a43;
+    border-color: #d11a43;
+  }
+
+  .btn:focus-visible,
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible {
+    outline: 3px solid #ffb3c4;
+    outline-offset: 2px;
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+</style>
