@@ -1,6 +1,6 @@
 ---
 import Logo from './Logo.astro';
-import { menu, redes, farmacias, telHref } from '../data/sitio';
+import { menu, redes, farmacias, telHref, isActive, comprarHref } from '../data/sitio';
 
 const current = Astro.url.pathname;
 ---
@@ -43,11 +43,11 @@ const current = Astro.url.pathname;
       <ul class="nav-links">
         {menu.map((m) => (
           <li>
-            <a href={m.href} aria-current={m.href === current ? 'page' : undefined}>{m.label}</a>
+            <a href={m.href} aria-current={isActive(m.href, current) ? 'page' : undefined}>{m.label}</a>
           </li>
         ))}
       </ul>
-      <a class="nav-cta" href="#">Comprar Ahora</a>
+      <a class="nav-cta" href={comprarHref}>Comprar Ahora</a>
     </div>
   </nav>
 </header>

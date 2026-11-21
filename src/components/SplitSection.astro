@@ -1,0 +1,147 @@
+---
+/**
+ * Sección imagen + texto en dos columnas (patrón repetido en Nosotros, Producto,
+ * Otitis externa y REG.CERT.POL.).
+ *
+ * Uso:
+ *   <SplitSection image={foto} alt="…" title="Acerca de Nosotros">
+ *     <p>…</p>
+ *     <a class="btn" href="/contacto">Contáctanos</a>
+ *   </SplitSection>
+ *
+ * Props:
+ *  - image / alt: foto (ImageMetadata importada desde src/assets).
+ *  - title: título h2 (opcional; si no, usar el slot "title" o ninguno).
+ *  - reverse: foto a la derecha.
+ *  - tone: 'light' (fondo blanco, texto gris) | 'dark' (para usar sobre fondos azules: texto blanco).
+ *  - ratio: proporción de la foto, p. ej. "748 / 532" (por defecto la del Figma).
+ *  - priority: true para la primera foto de la página (carga inmediata).
+ *  - padded: añade el padding vertical estándar de sección (por defecto true).
+ */
+import { Image } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+
+interface Props {
+  image: ImageMetadata;
+  alt: string;
+  title?: string;
+  reverse?: boolean;
+  tone?: 'light' | 'dark';
+  ratio?: string;
+  priority?: boolean;
+  padded?: boolean;
+  id?: string;
+}
+
+const {
+  image,
+  alt,
+  title,
+  reverse = false,
+  tone = 'light',
+  ratio = '748 / 532',
+  priority = false,
+  padded = true,
+  id,
+} = Astro.props;
+---
+<section
+  id={id}
+  class:list={['split', 'container', { reverse, dark: tone === 'dark', padded }]}
+  style={`--ratio:${ratio}`}
+>
+  <div class="foto">
+    <Image
+      src={image}
+      alt={alt}
+      widths={[480, 760, 1100, 1500]}
+      sizes="(max-width: 900px) 100vw, 45vw"
+      format="webp"
+      quality={78}
+      loading={priority ? 'eager' : 'lazy'}
+      fetchpriority={priority ? 'high' : 'auto'}
+    />
+  </div>
+
+  <div class="texto">
+    {title && <h2>{title}</h2>}
+    <slot name="title" />
+    <div class="cuerpo">
+      <slot />
+    </div>
+  </div>
+</section>
+
+<style>
+  .split {
+    display: grid;
+    grid-template-columns: minmax(0, 748fr) minmax(0, 797fr);
+    gap: clamp(32px, 6.3vw, 120px);
+    align-items: center;
+  }
+  .split.padded {
+    padding-block: clamp(48px, 5.1vw, 98px);
+  }
+  .split.reverse {
+    grid-template-columns: minmax(0, 797fr) minmax(0, 748fr);
+  }
+  .split.reverse .foto {
+    order: 2;
+  }
+
+  .foto img {
+    width: 100%;
+    aspect-ratio: var(--ratio);
+    object-fit: cover;
+    border-radius: 20px;
+  }
+
+  h2,
+  .texto :global(h2) {
+    margin: 0 0 clamp(20px, 2.6vw, 50px);
+    font-weight: 700;
+    font-size: clamp(26px, 2.08vw, 40px);
+    line-height: 1.25;
+    color: var(--azul-900);
+  }
+  .cuerpo :global(p),
+  .cuerpo :global(li) {
+    font-size: 17px;
+    line-height: 1.602;
+    color: var(--texto);
+  }
+  .cuerpo :global(p) {
+    margin: 0 0 24px;
+  }
+  .cuerpo :global(h3) {
+    margin: 0 0 8px;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--azul-900);
+  }
+  .cuerpo :global(.btn) {
+    margin-top: clamp(12px, 1.2vw, 22px);
+  }
+
+  .dark h2,
+  .dark .texto :global(h2),
+  .dark .cuerpo :global(h3),
+  .dark .cuerpo :global(p),
+  .dark .cuerpo :global(li) {
+    color: #fff;
+  }
+
+  @media (max-width: 900px) {
+    .split,
+    .split.reverse {
+      grid-template-columns: 1fr;
+    }
+    .split.reverse .foto {
+      order: 0;
+    }
+    .cuerpo :global(p),
+    .cuerpo :global(li) {
+      font-size: 16px;
+    }
+  }
+</style>

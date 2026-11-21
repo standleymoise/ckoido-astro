@@ -1,0 +1,40 @@
+---
+import Base from '../layouts/Base.astro';
+import Header from '../components/Header.astro';
+import PageTitle from '../components/PageTitle.astro';
+import SplitSection from '../components/SplitSection.astro';
+import PromoBanner from '../components/PromoBanner.astro';
+import Newsletter from '../components/Newsletter.astro';
+import Footer from '../components/Footer.astro';
+import { rutas } from '../data/sitio';
+import fotoOtoscopio from '../assets/reg/otoscopio.jpg';
+---
+<Base title="REG. CERT. POL. | CK Oído">
+  <Header />
+  <main>
+    <PageTitle title="REG.CERT.POL." />
+
+    <SplitSection
+      image={fotoOtoscopio}
+      alt="Médico revisando el oído de un paciente con un otoscopio"
+      title="REG. CERT. POL"
+      priority
+    >
+      <p>
+        Roleisa farmacéutica en representación de CK Oído, cuenta con Certificado de Registro del Ministerio de
+        Salud de Costa Rica y se rige bajo sus leyes.
+      </p>
+      <p>
+        Nuestra política de devolución aplica únicamente a establecimientos (puntos de venta), y hace referencia a
+        que el producto cerrado y próximo a vencer se puede cambiar mediante una solicitud; la misma deberá de ser
+        enviada por correo electrónico al menos 30 días antes de la fecha de vencimiento, posterior no se admiten
+        cambios o devolución de producto. No se cambian productos abiertos ni en mal estado.
+      </p>
+      <a class="btn" href={rutas.contacto}>Contáctanos</a>
+    </SplitSection>
+
+    <PromoBanner />
+    <Newsletter />
+  </main>
+  <Footer />
+</Base>
