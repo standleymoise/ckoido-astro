@@ -159,6 +159,10 @@ const provincias = [
         </select>
       </label>
       <label>Cantón / ciudad <input name="city" required autocomplete="address-level2" /></label>
+      <label>
+        Código postal
+        <input name="postcode" required inputmode="numeric" pattern="[0-9]{5}" maxlength="5" autocomplete="postal-code" />
+      </label>
       <label class="ancho">Dirección exacta <input name="address_1" required autocomplete="street-address" /></label>
       <label class="ancho">Nota para el pedido (opcional) <textarea name="customer_note" rows="2"></textarea></label>
     </div>
@@ -605,7 +609,8 @@ const provincias = [
       const error = formCheckout.querySelector<HTMLElement>('[data-error]')!;
       const enviar = formCheckout.querySelector<HTMLButtonElement>('[data-enviar]')!;
       if (!formCheckout.checkValidity()) {
-        error.textContent = 'Revise los campos marcados: todos son obligatorios excepto la nota.';
+        error.textContent =
+          'Revise los campos marcados: todos son obligatorios excepto la nota (el código postal tiene 5 números).';
         error.hidden = false;
         formCheckout.classList.add('validar');
         (formCheckout.querySelector(':invalid') as HTMLElement | null)?.focus();
@@ -618,7 +623,7 @@ const provincias = [
         address_1: d.address_1,
         city: d.city,
         state: d.state,
-        postcode: '',
+        postcode: d.postcode,
         country: 'CR',
         phone: d.phone,
       };
