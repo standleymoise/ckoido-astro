@@ -25,8 +25,14 @@ El mismo código se publica también en modo tienda:
 - `PUBLIC_TIENDA_URL` activa el modo tienda (`src/data/tienda.ts`). Al compilar, Astro lee la
   Store API pública de WooCommerce (`/wp-json/wc/store/v1/products`, sin claves): nombre, precio,
   foto y stock.
+- **El inicio es una tienda con tarjetas deslizables** (`src/components/tienda/TiendaSwipe.astro`):
+  → derecha agrega al carrito, ← izquierda pasa, ↑ arriba guarda en favoritos, ↓ abajo abre el
+  detalle (también con botones y flechas del teclado). El carrito (panel lateral) y el checkout
+  usan la Store API desde el navegador con el encabezado `Cart-Token`: el visitante **nunca sale
+  de taxlockedwallet.com**. Los favoritos se guardan en el navegador. WooCommerce solo permite
+  CORS desde su propio dominio, así que el carrito no funciona desde `localhost`.
 - Se genera `/productos` (catálogo; no `/tienda`, porque en Hostinger esa carpeta es la del subdominio) y las fichas de producto muestran el precio. «Comprar ahora»
-  usa `?add-to-cart=ID` y WooCommerce redirige al carrito; el checkout y el pago son de WooCommerce.
+  abre la tienda del inicio con ese producto primero (`/#sku`).
 - Las fichas se enlazan por **SKU**: `ck-oido`, `ck-oido-suave`, `sincerax`.
 - `.github/workflows/deploy-hostinger.yml` compila con `BASE_PATH=/` y publica `dist/` en la
   rama `hostinger`; hPanel → Avanzado → GIT la clona en `public_html` con despliegue automático.

@@ -20,8 +20,11 @@ export const rutas = {
   tienda: url('/productos'),
 };
 
-/** Destino de los botones «Comprar ahora»: la tienda si está activa, si no «Dónde comprar». */
-export const comprarHref = tiendaActiva ? rutas.tienda : rutas.dondeComprar;
+/** Destino de los botones «Comprar ahora»: la tienda (el inicio) si está activa, si no «Dónde comprar». */
+export const comprarHref = tiendaActiva ? rutas.inicio : rutas.dondeComprar;
+
+/** En modo tienda: abre la tienda con ese producto primero (sin salir del sitio). */
+export const comprarProducto = (sku: string) => `${rutas.inicio}#${encodeURIComponent(sku)}`;
 
 export const menu = [
   { label: 'Inicio', href: rutas.inicio },

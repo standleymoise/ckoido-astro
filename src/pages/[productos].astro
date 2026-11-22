@@ -9,8 +9,8 @@ import Header from '../components/Header.astro';
 import PageTitle from '../components/PageTitle.astro';
 import Newsletter from '../components/Newsletter.astro';
 import Footer from '../components/Footer.astro';
-import { getProductos, tiendaActiva, tiendaUrl } from '../data/tienda';
-import { rutas } from '../data/sitio';
+import { getProductos, tiendaActiva } from '../data/tienda';
+import { rutas, comprarProducto } from '../data/sitio';
 
 export function getStaticPaths() {
   return tiendaActiva ? [{ params: { productos: 'productos' } }] : [];
@@ -59,7 +59,7 @@ const fichas: Record<string, string> = {
                 {p.resumen && <p class="resumen">{p.resumen}</p>}
                 <p class="precio">{p.precio}</p>
                 {p.enStock ? (
-                  <a class="btn" href={p.comprarUrl}>Agregar al carrito</a>
+                  <a class="btn" href={comprarProducto(p.sku)}>Comprar</a>
                 ) : (
                   <span class="agotado">Agotado por ahora</span>
                 )}
@@ -68,9 +68,6 @@ const fichas: Record<string, string> = {
           ))}
         </ul>
       )}
-      <p class="nota">
-        El carrito y el pago se procesan de forma segura en <a href={`${tiendaUrl}/carrito/`}>nuestra tienda</a>.
-      </p>
     </section>
 
     <Newsletter />
