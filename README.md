@@ -25,7 +25,7 @@ El mismo código se publica también en modo tienda:
 - `PUBLIC_TIENDA_URL` activa el modo tienda (`src/data/tienda.ts`). Al compilar, Astro lee la
   Store API pública de WooCommerce (`/wp-json/wc/store/v1/products`, sin claves): nombre, precio,
   foto y stock.
-- **El inicio es una tienda con tarjetas deslizables** (`src/components/tienda/TiendaSwipe.astro`):
+- **El inicio es solo una tienda con tarjetas deslizables**, a pantalla completa y sin header ni footer (`src/components/tienda/TiendaSwipe.astro`):
   → derecha agrega al carrito, ← izquierda pasa, ↑ arriba guarda en favoritos, ↓ abajo abre el
   detalle (también con botones y flechas del teclado). El carrito (panel lateral) y el checkout
   usan la Store API desde el navegador con el encabezado `Cart-Token`: el visitante **nunca sale
@@ -36,8 +36,11 @@ El mismo código se publica también en modo tienda:
 - Las fichas se enlazan por **SKU**: `ck-oido`, `ck-oido-suave`, `sincerax`.
 - `.github/workflows/deploy-hostinger.yml` compila con `BASE_PATH=/` y publica `dist/` en la
   rama `hostinger`; hPanel → Avanzado → GIT la clona en `public_html` con despliegue automático.
-- Un cambio de precio en WooCommerce aparece después de la siguiente compilación
-  (push a `main` o Actions → «Deploy to Hostinger» → Run workflow).
+- **Precios y stock en vivo:** la página trae el catálogo de la última compilación (carga
+  instantánea) y al abrirse lo compara con WooCommerce: precio, stock, nombre, fotos, productos
+  nuevos y borrados se actualizan solos. El carrito y el checkout siempre usan el precio actual
+  porque los calcula WooCommerce. Las fichas de producto (`/nuestro-producto`) y `/productos`
+  muestran el precio de la última compilación (push a `main` o Actions → Run workflow).
 - Sin `PUBLIC_TIENDA_URL` (GitHub Pages) todo sigue como antes: no hay `/productos` y los botones
   llevan a «Dónde comprar».
 

@@ -15,7 +15,8 @@ import TiendaSwipe from '../components/tienda/TiendaSwipe.astro';
 import { getPosts } from '../data/blog';
 import { getProductos, tiendaActiva } from '../data/tienda';
 
-// En modo tienda (Hostinger) el inicio es la tienda con tarjetas deslizables;
+// En modo tienda (Hostinger) el inicio es solo la tienda con tarjetas deslizables,
+// a pantalla completa y sin header ni footer;
 // en GitHub Pages sigue siendo el inicio informativo del Figma.
 const productos = await getProductos();
 const posts = tiendaActiva ? [] : (await getPosts()).slice(0, 4);
@@ -24,12 +25,11 @@ const posts = tiendaActiva ? [] : (await getPosts()).slice(0, 4);
   title={tiendaActiva ? 'Tienda CK Oído | Gotas para los oídos' : 'CK Oído | Gotas para prevenir infecciones en los oídos'}
   description="CK Oído: gotas de uso tópico que secan el agua atrapada en el oído después de nadar o bañarse y ayudan a prevenir infecciones del oído externo."
 >
-  <Header />
   {tiendaActiva ? (
-    <main>
-      <TiendaSwipe productos={productos} />
-    </main>
+    <TiendaSwipe productos={productos} />
   ) : (
+  <>
+  <Header />
   <main>
     <Hero />
     <BenefitsBar />
@@ -50,8 +50,9 @@ const posts = tiendaActiva ? [] : (await getPosts()).slice(0, 4);
 
     <ContactSection />
   </main>
-  )}
   <Footer />
+  </>
+  )}
 </Base>
 
 <style>

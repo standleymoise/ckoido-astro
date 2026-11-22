@@ -5,6 +5,7 @@
 // El carrito y el checkout usan la Store API de WooCommerce desde el navegador
 // (con el encabezado Cart-Token), así que el visitante nunca sale del sitio.
 import { Image } from 'astro:assets';
+import Logo from '../Logo.astro';
 import type { Producto } from '../../data/tienda';
 import { storeApiUrl } from '../../data/tienda';
 
@@ -23,21 +24,16 @@ const provincias = [
   ['CR-L', 'Limón'],
 ];
 ---
-<section class="tienda" data-api={storeApiUrl} aria-labelledby="tienda-titulo">
-  <div class="cabecera">
-    <div>
-      <h1 id="tienda-titulo">Tienda CK Oído</h1>
-      <p class="ayuda">
-        <span aria-hidden="true">→</span> carrito · <span aria-hidden="true">←</span> pasar ·
-        <span aria-hidden="true">↑</span> favorito · <span aria-hidden="true">↓</span> detalle
-      </p>
-    </div>
+<main class="tienda" data-api={storeApiUrl} aria-labelledby="tienda-titulo">
+  <header class="cabecera">
+    <Logo size={118} />
+    <h1 id="tienda-titulo" class="sr-only">Tienda CK Oído</h1>
     <button class="btn-carrito" type="button" data-accion="abrir-carrito">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.4 10.2a1.5 1.5 0 0 0 1.5 1.1h8.6a1.5 1.5 0 0 0 1.4-1.1L21 8H6.2" /><circle cx="9.5" cy="19.5" r="1.4" /><circle cx="17" cy="19.5" r="1.4" /></svg>
       <span class="sr-only">Carrito</span>
       <span class="contador" data-contador hidden>0</span>
     </button>
-  </div>
+  </header>
 
   <div class="mazo" data-mazo>
     {productos.map((p, i) => (
@@ -113,8 +109,29 @@ const provincias = [
     </button>
   </div>
 
+  <p class="ayuda">
+    <span aria-hidden="true">→</span> carrito · <span aria-hidden="true">←</span> pasar ·
+    <span aria-hidden="true">↑</span> favorito · <span aria-hidden="true">↓</span> detalle
+  </p>
+
+  <!-- Molde para productos nuevos que aparecen en WooCommerce después de compilar -->
+  <template data-plantilla-tarjeta>
+    <article class="tarjeta" aria-roledescription="tarjeta de producto">
+      <div class="foto"><img alt="" draggable="false" decoding="async" /></div>
+      <span class="sello sello-carrito" aria-hidden="true">Al carrito</span>
+      <span class="sello sello-pasar" aria-hidden="true">Paso</span>
+      <span class="sello sello-favorito" aria-hidden="true">Favorito</span>
+      <div class="info">
+        <h2></h2>
+        <p class="precio"></p>
+        <p class="stock"></p>
+      </div>
+      <template data-detalle></template>
+    </article>
+  </template>
+
   <p class="aviso" data-aviso role="status" aria-live="polite"></p>
-</section>
+</main>
 
 <!-- Detalle del producto (↓) -->
 <dialog class="hoja detalle" data-dialog-detalle aria-label="Detalle del producto">
@@ -316,10 +333,122 @@ const provincias = [
     const tarjetas = [...mazo.querySelectorAll<HTMLElement>('.tarjeta')];
     // #sku en la URL (p. ej. desde «Comprar ahora» de una ficha) pone ese producto primero.
     const pedido = decodeURIComponent(location.hash.slice(1));
-    const orden = pedido ? [...tarjetas].sort((a, b) => Number(b.dataset.sku === pedido) - Number(a.dataset.sku === pedido)) : tarjetas;
+    const orden = [...tarjetas].sort(
+      (a, b) => Number(b.dataset.sku === pedido) - Number(a.dataset.sku === pedido),
+    );
     let pos = 0;
-    const historial: { tarjeta: HTMLElement; accion: Accion }[] = [];
+    let historial: { tarjeta: HTMLElement; accion: Accion }[] = [];
     type Accion = 'carrito' | 'pasar' | 'favorito';
+
+    // ---------- catálogo en vivo ----------
+    // La página trae los productos de la última compilación (carga instantánea) y al abrir
+    // los compara con WooCommerce: precio, stock, nombre y fotos quedan al día, aparecen
+    // los productos nuevos y se quitan los borrados, sin volver a publicar el sitio.
+    type ProductoApi = {
+      id: number;
+      sku: string;
+      name: string;
+      short_description: string;
+      description: string;
+      is_purchasable: boolean;
+      is_in_stock: boolean;
+      stock_availability?: { text: string };
+      images: { src: string; srcset?: string; sizes?: string; alt: string }[];
+      prices: Precio & { price: string };
+    };
+    const plantillaTarjeta = raiz.querySelector<HTMLTemplateElement>('template[data-plantilla-tarjeta]')!;
+
+    const parrafosDe = (html: string) => {
+      const doc = new DOMParser().parseFromString(html || '', 'text/html');
+      const ps = [...doc.querySelectorAll('p')].map((p) => p.textContent!.trim()).filter(Boolean);
+      return ps.length ? ps : [doc.body.textContent!.trim()].filter(Boolean);
+    };
+
+    function crearDetalle(p: ProductoApi, precio: string, stock: string, enStock: boolean) {
+      const f = document.createDocumentFragment();
+      const el = (tag: string, texto = '', clase = '') => {
+        const e = document.createElement(tag);
+        if (texto) e.textContent = texto;
+        if (clase) e.className = clase;
+        return e;
+      };
+      const fotos = el('div', '', 'detalle-fotos');
+      p.images.forEach((i) => {
+        const img = document.createElement('img');
+        img.src = i.src;
+        img.alt = i.alt || p.name;
+        img.loading = 'lazy';
+        fotos.append(img);
+      });
+      f.append(fotos, el('h2', p.name), el('p', precio, 'precio'), el('p', stock, enStock ? 'stock' : 'stock agotado'));
+      const resumen = parrafosDe(p.short_description).join(' ');
+      if (resumen) f.append(el('p', resumen, 'resumen'));
+      parrafosDe(p.description).forEach((d) => f.append(el('p', d)));
+      return f;
+    }
+
+    function actualizarTarjeta(t: HTMLElement, p: ProductoApi) {
+      const precio = formato(p.prices.price, p.prices);
+      const enStock = p.is_purchasable && p.is_in_stock;
+      const stock = p.stock_availability?.text || (p.is_in_stock ? 'Disponible' : 'Agotado');
+      t.dataset.id = String(p.id);
+      t.dataset.sku = p.sku;
+      t.dataset.nombre = p.name;
+      t.dataset.stock = enStock ? '1' : '0';
+      t.setAttribute('aria-label', `${p.name}, ${precio}`);
+      t.querySelector('.info h2')!.textContent = p.name;
+      t.querySelector('.info .precio')!.textContent = precio;
+      const st = t.querySelector<HTMLElement>('.info .stock')!;
+      st.textContent = stock;
+      st.classList.toggle('agotado', !enStock);
+      t.querySelector<HTMLTemplateElement>('template[data-detalle]')!.content.replaceChildren(
+        crearDetalle(p, precio, stock, enStock),
+      );
+    }
+
+    function crearTarjeta(p: ProductoApi) {
+      const t = (plantillaTarjeta.content.firstElementChild as HTMLElement).cloneNode(true) as HTMLElement;
+      const img = t.querySelector('img')!;
+      const foto = p.images[0];
+      if (foto) {
+        img.src = foto.src;
+        if (foto.srcset) img.srcset = foto.srcset;
+        img.sizes = '(max-width: 480px) 90vw, 420px';
+        img.alt = foto.alt || p.name;
+      } else img.remove();
+      return t;
+    }
+
+    async function refrescarCatalogo() {
+      const r = await fetch(`${API}/products?per_page=100&orderby=title&order=asc`);
+      if (!r.ok) return;
+      const lista = (await r.json()) as ProductoApi[];
+      const porId = new Map(tarjetas.map((t) => [Number(t.dataset.id), t]));
+      const vivos = new Set(lista.map((p) => p.id));
+
+      // Quitar los que ya no están publicados (ajustando la posición del mazo).
+      for (const t of [...tarjetas]) {
+        if (vivos.has(Number(t.dataset.id))) continue;
+        const i = orden.indexOf(t);
+        if (i > -1 && i < pos) pos--;
+        if (i > -1) orden.splice(i, 1);
+        tarjetas.splice(tarjetas.indexOf(t), 1);
+        historial = historial.filter((h) => h.tarjeta !== t);
+        t.remove();
+      }
+      // Actualizar los que existen y agregar los nuevos al final del mazo.
+      for (const p of lista) {
+        let t = porId.get(p.id);
+        if (!t) {
+          t = crearTarjeta(p);
+          mazo.insertBefore(t, fin);
+          tarjetas.push(t);
+          orden.push(t);
+        }
+        actualizarTarjeta(t, p);
+      }
+      if (!ocupado && !inicio) pintarMazo();
+    }
 
     const actual = () => orden[pos] as HTMLElement | undefined;
 
@@ -716,34 +845,57 @@ const provincias = [
     pintarMazo();
     raiz.classList.add('lista');
     if (token) cargarCarrito().catch(() => {});
+    refrescarCatalogo().catch(() => {
+      /* sin conexión con la tienda: quedan los datos de la última compilación */
+    });
+    // Al volver a la pestaña (p. ej. después de un rato) se vuelve a consultar.
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') refrescarCatalogo().catch(() => {});
+    });
   }
 </script>
 
 <style>
+  /* App a pantalla completa: barra, mazo (ocupa el alto que sobra), botones y ayuda.
+     En pantallas muy bajas (celular acostado) deja de fijar el alto y se puede desplazar. */
+  :global(body) {
+    background:
+      radial-gradient(120% 60% at 50% 0%, #e7f1ff 0%, rgba(231, 241, 255, 0) 70%),
+      linear-gradient(180deg, #f5f9ff, #fff);
+  }
   .tienda {
     --verde: #17a35c;
     --ambar: #f0a500;
-    width: min(460px, 100% - 32px);
+    width: min(460px, 100%);
+    height: 100vh;
+    height: 100dvh;
     margin-inline: auto;
-    padding-block: clamp(16px, 3vw, 40px) clamp(32px, 4vw, 56px);
+    padding: max(10px, env(safe-area-inset-top)) 16px max(12px, env(safe-area-inset-bottom));
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 12px;
+  }
+  @media (max-height: 540px) {
+    .tienda {
+      height: auto;
+      min-height: 100dvh;
+    }
+    .mazo {
+      flex: none !important;
+      height: 440px;
+    }
   }
   .cabecera {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-  }
-  h1 {
-    margin: 0;
-    font-size: clamp(22px, 1.6vw, 28px);
-    color: var(--azul-900);
+    min-height: 52px;
   }
   .ayuda {
-    margin: 4px 0 0;
+    margin: 0;
     font-size: 13px;
+    text-align: center;
     color: var(--texto);
   }
   .btn-carrito {
@@ -794,7 +946,8 @@ const provincias = [
   /* ---------- mazo ---------- */
   .mazo {
     position: relative;
-    height: clamp(440px, 66svh, 620px);
+    flex: 1;
+    min-height: 300px;
   }
   .tarjeta {
     position: absolute;
@@ -948,7 +1101,7 @@ const provincias = [
     align-items: center;
     justify-content: center;
     gap: clamp(10px, 3vw, 18px);
-    margin-top: 8px;
+    padding-top: 4px;
   }
   .accion {
     display: grid;
