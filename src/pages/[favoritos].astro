@@ -326,6 +326,8 @@ const iniciales = (await getProductos()).map((p) => ({
   .lista :global(.foto) {
     display: block;
     aspect-ratio: 1;
+    /* Sin overflow, una foto alta estiraría el cuadro por encima del aspect-ratio */
+    overflow: hidden;
     padding: 14px;
     background: linear-gradient(180deg, var(--celeste), #fff);
   }
