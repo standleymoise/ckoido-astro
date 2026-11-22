@@ -1,5 +1,6 @@
 ---
-// Página /tienda: catálogo leído de WooCommerce al compilar.
+// Página /productos: catálogo leído de WooCommerce al compilar.
+// (No se llama /tienda porque en Hostinger esa carpeta es la del subdominio tienda., WordPress.)
 // Solo se genera cuando PUBLIC_TIENDA_URL está definida (ver src/data/tienda.ts);
 // en GitHub Pages no existe y «Comprar ahora» sigue llevando a «Dónde comprar».
 import { Image } from 'astro:assets';
@@ -12,7 +13,7 @@ import { getProductos, tiendaActiva, tiendaUrl } from '../data/tienda';
 import { rutas } from '../data/sitio';
 
 export function getStaticPaths() {
-  return tiendaActiva ? [{ params: { tienda: 'tienda' } }] : [];
+  return tiendaActiva ? [{ params: { productos: 'productos' } }] : [];
 }
 
 const productos = await getProductos();

@@ -17,7 +17,7 @@ export const rutas = {
   regCertPol: url('/reg-cert-pol'),
   blog: url('/blog'),
   contacto: url('/contacto'),
-  tienda: url('/tienda'),
+  tienda: url('/productos'),
 };
 
 /** Destino de los botones «Comprar ahora»: la tienda si está activa, si no «Dónde comprar». */

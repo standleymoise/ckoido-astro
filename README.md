@@ -25,14 +25,14 @@ El mismo código se publica también en modo tienda:
 - `PUBLIC_TIENDA_URL` activa el modo tienda (`src/data/tienda.ts`). Al compilar, Astro lee la
   Store API pública de WooCommerce (`/wp-json/wc/store/v1/products`, sin claves): nombre, precio,
   foto y stock.
-- Se genera `/tienda` (catálogo) y las fichas de producto muestran el precio. «Comprar ahora»
+- Se genera `/productos` (catálogo; no `/tienda`, porque en Hostinger esa carpeta es la del subdominio) y las fichas de producto muestran el precio. «Comprar ahora»
   usa `?add-to-cart=ID` y WooCommerce redirige al carrito; el checkout y el pago son de WooCommerce.
 - Las fichas se enlazan por **SKU**: `ck-oido`, `ck-oido-suave`, `sincerax`.
 - `.github/workflows/deploy-hostinger.yml` compila con `BASE_PATH=/` y publica `dist/` en la
   rama `hostinger`; hPanel → Avanzado → GIT la clona en `public_html` con despliegue automático.
 - Un cambio de precio en WooCommerce aparece después de la siguiente compilación
   (push a `main` o Actions → «Deploy to Hostinger» → Run workflow).
-- Sin `PUBLIC_TIENDA_URL` (GitHub Pages) todo sigue como antes: no hay `/tienda` y los botones
+- Sin `PUBLIC_TIENDA_URL` (GitHub Pages) todo sigue como antes: no hay `/productos` y los botones
   llevan a «Dónde comprar».
 
 ## Comandos
