@@ -27,6 +27,11 @@ const provincias = [
 ---
 <main class="tienda" data-api={storeApiUrl} aria-labelledby="tienda-titulo">
   <header class="cabecera">
+    <a class="btn-carrito btn-cuenta" href={rutas.cuenta} data-cuenta>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="4" /><path d="M4.5 20a7.5 7.5 0 0 1 15 0" /></svg>
+      <span class="iniciales" data-iniciales hidden></span>
+      <span class="sr-only">Mi cuenta</span>
+    </a>
     <Logo size={118} />
     <h1 id="tienda-titulo" class="sr-only">Tienda CK Oído</h1>
     <div class="cabecera-botones">
@@ -216,6 +221,8 @@ const provincias = [
 <script>
   import {
     crearCliente,
+    iniciales,
+    leerPerfil,
     type ProductoApi,
     formato,
     leerFavoritos,
@@ -252,6 +259,14 @@ const provincias = [
       guardarFavoritos(favoritos);
       pintarContadorFavs();
     };
+
+    // ---------- cuenta (iniciales en la barra si hay sesión) ----------
+    function pintarCuenta() {
+      const perfil = leerPerfil();
+      const el = raiz.querySelector<HTMLElement>('[data-iniciales]')!;
+      el.hidden = !perfil;
+      el.textContent = perfil ? iniciales(perfil) : '';
+    }
 
     // ---------- carrito ----------
     let carrito: Carrito | null = null;
@@ -661,6 +676,24 @@ const provincias = [
           return label;
         }),
       );
+      // Con sesión, se llenan los campos vacíos con los datos guardados de la cuenta.
+      const perfil = leerPerfil();
+      if (perfil) {
+        const campos: Record<string, string> = {
+          first_name: perfil.nombre,
+          last_name: perfil.apellidos,
+          email: perfil.email,
+          phone: perfil.telefono,
+          state: perfil.provincia,
+          city: perfil.ciudad,
+          postcode: perfil.postal,
+          address_1: perfil.direccion,
+        };
+        for (const [nombre, valor] of Object.entries(campos)) {
+          const el = formCheckout.elements.namedItem(nombre) as HTMLInputElement | HTMLSelectElement | null;
+          if (el && valor && (!el.value || el.tagName === 'SELECT')) el.value = valor;
+        }
+      }
       formCheckout.querySelector<HTMLElement>('[data-error]')!.hidden = true;
       mostrarVista('checkout');
       formCheckout.querySelector<HTMLInputElement>('input')?.focus();
@@ -714,7 +747,9 @@ const provincias = [
           d.payment_method === 'bacs'
             ? `Su pedido #${r.order_id} quedó registrado. Le enviamos a ${d.email} los datos para hacer la transferencia.`
             : `Su pedido #${r.order_id} quedó registrado. Le confirmaremos la entrega a ${d.email} o al ${d.phone}.`;
-        dlgCarrito.querySelector<HTMLElement>('[data-gracias-texto]')!.textContent = texto;
+        dlgCarrito.querySelector<HTMLElement>('[data-gracias-texto]')!.textContent = cliente.conSesion()
+          ? `${texto} También lo puede ver en Mi cuenta.`
+          : texto;
         mostrarVista('gracias');
         formCheckout.reset();
         formCheckout.classList.remove('validar');
@@ -778,6 +813,7 @@ const provincias = [
     pintarMazo();
     raiz.classList.add('lista');
     pintarContadorFavs();
+    pintarCuenta();
     if (cliente.tieneCarrito()) cargarCarrito().catch(() => {});
     // /#carrito (p. ej. desde la página de favoritos) abre el carrito.
     if (location.hash === '#carrito') abrirCarrito();
@@ -789,6 +825,7 @@ const provincias = [
       refrescarCatalogo().catch(() => {});
       favoritos = leerFavoritos();
       pintarContadorFavs();
+      pintarCuenta();
       if (!ocupado && !inicio) pintarMazo();
       if (cliente.tieneCarrito()) cargarCarrito().catch(() => {});
     };
@@ -833,11 +870,33 @@ const provincias = [
     }
   }
   .cabecera {
-    display: flex;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
     align-items: center;
-    justify-content: space-between;
-    gap: 16px;
+    gap: 8px;
     min-height: 52px;
+  }
+  .cabecera-botones {
+    justify-self: end;
+  }
+  .btn-cuenta {
+    justify-self: start;
+    overflow: hidden;
+  }
+  .btn-cuenta .iniciales {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: linear-gradient(160deg, var(--azul-600), var(--azul-900));
+    color: #fff;
+    font-family: var(--font-alt);
+    font-weight: 800;
+    font-size: 17px;
+  }
+  .btn-cuenta .iniciales[hidden] {
+    display: none;
   }
   .ayuda {
     margin: 0;

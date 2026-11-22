@@ -34,6 +34,11 @@ El mismo código se publica también en modo tienda:
 - **`/favoritos`**: los productos guardados con ↑ (2 columnas en celular), con precio y stock en
   vivo, «Agregar al carrito» (mismo carrito) y «Quitar». Se abre con la ★ de la barra de la tienda.
   El cliente de la Store API compartido está en `src/scripts/tienda-api.ts`.
+- **`/cuenta`**: iniciar sesión, crear cuenta, recuperar contraseña y «Mi cuenta» (avatar con
+  iniciales, pedidos con su estado y datos de entrega editables). Usa el plugin
+  `wordpress/mu-plugins/ckoido-cuenta.php` (token propio `X-CKOido-Token`, 30 días). Con sesión,
+  la barra de la tienda muestra las iniciales, el checkout se llena solo y el pedido queda en la
+  cuenta del cliente. Los plugins de `wordpress/` se suben a mano al servidor (ver `wordpress/README.md`).
 - Se genera `/productos` (catálogo; no `/tienda`, porque en Hostinger esa carpeta es la del subdominio) y las fichas de producto muestran el precio. «Comprar ahora»
   abre la tienda del inicio con ese producto primero (`/#sku`).
 - Las fichas se enlazan por **SKU**: `ck-oido`, `ck-oido-suave`, `sincerax`.

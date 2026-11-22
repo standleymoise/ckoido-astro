@@ -4,6 +4,9 @@
 // - El carrito se identifica con el encabezado Cart-Token (guardado en localStorage), así
 //   funciona desde otro dominio sin cookies ni nonce.
 // - Los favoritos son una lista de SKU en localStorage (no requieren cuenta).
+// - La sesión del cliente es un token propio (X-CKOido-Token) que entrega el plugin
+//   wordpress/mu-plugins/ckoido-cuenta.php. Se envía también a la Store API, así WooCommerce
+//   reconoce al cliente y el pedido queda en su cuenta.
 
 export type Precio = { currency_code: string; currency_minor_unit: number };
 export type Item = {
@@ -35,6 +38,30 @@ export type ProductoApi = {
 
 const CLAVE_TOKEN = 'ckoido-cart-token';
 const CLAVE_FAVS = 'ckoido-favoritos';
+const CLAVE_SESION = 'ckoido-sesion';
+const CLAVE_PERFIL = 'ckoido-perfil';
+
+export type Perfil = {
+  email: string;
+  nombre: string;
+  apellidos: string;
+  desde: string;
+  telefono: string;
+  direccion: string;
+  ciudad: string;
+  provincia: string;
+  postal: string;
+};
+export type Pedido = {
+  numero: string;
+  fecha: string;
+  estado: string;
+  estado_texto: string;
+  total: number;
+  moneda: string;
+  pago: string;
+  items: { nombre: string; cantidad: number; imagen: string }[];
+};
 
 // ---------- almacenamiento local (puede fallar en modo privado) ----------
 export const leer = (k: string) => {
@@ -64,6 +91,23 @@ export function leerFavoritos(): Set<string> {
 }
 export const guardarFavoritos = (favs: Set<string>) => guardar(CLAVE_FAVS, JSON.stringify([...favs]));
 
+// ---------- sesión ----------
+export const leerSesion = () => leer(CLAVE_SESION);
+/** Perfil guardado al entrar (para pintar rápido el avatar y llenar el checkout). */
+export function leerPerfil(): Perfil | null {
+  try {
+    return leerSesion() ? (JSON.parse(leer(CLAVE_PERFIL) || 'null') as Perfil | null) : null;
+  } catch {
+    return null;
+  }
+}
+export function guardarSesion(token: string | null, perfil: Perfil | null = null) {
+  guardar(CLAVE_SESION, token);
+  guardar(CLAVE_PERFIL, token && perfil ? JSON.stringify(perfil) : null);
+}
+export const iniciales = (p: Pick<Perfil, 'nombre' | 'apellidos' | 'email'>) =>
+  ((p.nombre?.[0] ?? '') + (p.apellidos?.[0] ?? '')).toUpperCase() || p.email[0].toUpperCase();
+
 // ---------- formato ----------
 export const formato = (valor: string, p: Precio) =>
   new Intl.NumberFormat('es-CR', {
@@ -89,6 +133,8 @@ export function crearCliente(API: string) {
     if (cuerpo !== undefined && !token) await api('/cart');
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (token) headers['Cart-Token'] = token;
+    const sesion = leerSesion();
+    if (sesion) headers['X-CKOido-Token'] = sesion;
     const r = await fetch(API + ruta, {
       method: cuerpo === undefined ? 'GET' : 'POST',
       headers,
@@ -112,8 +158,56 @@ export function crearCliente(API: string) {
     return datos as T;
   }
 
+  // Rutas del plugin de cuentas: /wp-json/ckoido/v1/… (misma base que la Store API).
+  const WP = API.replace(/\/wc\/store\/v1\/?$/, '') + '/ckoido/v1';
+  async function cuentaApi<T>(ruta: string, cuerpo?: unknown): Promise<T> {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    const sesion = leerSesion();
+    if (sesion) headers['X-CKOido-Token'] = sesion;
+    const r = await fetch(WP + ruta, {
+      method: cuerpo === undefined ? 'GET' : 'POST',
+      headers,
+      body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo),
+    });
+    const datos = await r.json().catch(() => null);
+    if (!r.ok) {
+      // Sesión vencida o cerrada en otro lado.
+      if (r.status === 401 && sesion && ruta === '/cuenta') guardarSesion(null);
+      const err = new Error(datos?.message ? textoPlano(datos.message) : `Error ${r.status}`) as Error & {
+        status?: number;
+      };
+      err.status = r.status;
+      throw err;
+    }
+    return datos as T;
+  }
+  const entrarCon = async (ruta: string, cuerpo: unknown) => {
+    const r = await cuentaApi<{ token: string; perfil: Perfil }>(ruta, cuerpo);
+    guardarSesion(r.token, r.perfil);
+    return r.perfil;
+  };
+
   return {
     api,
+    conSesion: () => !!leerSesion(),
+    login: (email: string, password: string) => entrarCon('/login', { email, password }),
+    registro: (datos: { email: string; password: string; nombre: string; apellidos: string }) =>
+      entrarCon('/registro', datos),
+    recuperar: (email: string) => cuentaApi<{ ok: boolean }>('/recuperar', { email }),
+    cuenta: async () => {
+      const r = await cuentaApi<{ perfil: Perfil; pedidos: Pedido[] }>('/cuenta');
+      guardar(CLAVE_PERFIL, JSON.stringify(r.perfil));
+      return r;
+    },
+    guardarCuenta: async (datos: Partial<Perfil>) => {
+      const r = await cuentaApi<{ perfil: Perfil }>('/cuenta', datos);
+      guardar(CLAVE_PERFIL, JSON.stringify(r.perfil));
+      return r.perfil;
+    },
+    salir: async () => {
+      await cuentaApi('/salir', {}).catch(() => {});
+      guardarSesion(null);
+    },
     tieneCarrito: () => !!token,
     productos: () => api<ProductoApi[]>('/products?per_page=100&orderby=title&order=asc'),
     carrito: () => api<Carrito>('/cart'),
