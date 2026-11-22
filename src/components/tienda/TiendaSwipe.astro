@@ -242,6 +242,9 @@ const provincias = [
     let carrito: Carrito | null = null;
 
     async function api<T>(ruta: string, cuerpo?: unknown, reintento = true): Promise<T> {
+      // Sin Cart-Token, WooCommerce exige un nonce en los POST, y desde otro dominio no se
+      // puede leer. Un GET /cart primero entrega el token y con él no hace falta el nonce.
+      if (cuerpo !== undefined && !token) await api('/cart');
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (token) headers['Cart-Token'] = token;
       const r = await fetch(API + ruta, {
