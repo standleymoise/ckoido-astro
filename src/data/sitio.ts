@@ -18,6 +18,7 @@ export const rutas = {
   blog: url('/blog'),
   contacto: url('/contacto'),
   tienda: url('/productos'),
+  favoritos: url('/favoritos'),
 };
 
 /** Destino de los botones «Comprar ahora»: la tienda (el inicio) si está activa, si no «Dónde comprar». */

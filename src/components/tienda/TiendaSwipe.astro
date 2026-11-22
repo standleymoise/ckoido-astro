@@ -6,6 +6,7 @@
 // (con el encabezado Cart-Token), así que el visitante nunca sale del sitio.
 import { Image } from 'astro:assets';
 import Logo from '../Logo.astro';
+import { rutas } from '../../data/sitio';
 import type { Producto } from '../../data/tienda';
 import { storeApiUrl } from '../../data/tienda';
 
@@ -28,11 +29,18 @@ const provincias = [
   <header class="cabecera">
     <Logo size={118} />
     <h1 id="tienda-titulo" class="sr-only">Tienda CK Oído</h1>
+    <div class="cabecera-botones">
+    <a class="btn-carrito btn-favs" href={rutas.favoritos}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" /></svg>
+      <span class="sr-only">Mis favoritos</span>
+      <span class="contador" data-contador-favs hidden>0</span>
+    </a>
     <button class="btn-carrito" type="button" data-accion="abrir-carrito">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.4 10.2a1.5 1.5 0 0 0 1.5 1.1h8.6a1.5 1.5 0 0 0 1.4-1.1L21 8H6.2" /><circle cx="9.5" cy="19.5" r="1.4" /><circle cx="17" cy="19.5" r="1.4" /></svg>
       <span class="sr-only">Carrito</span>
       <span class="contador" data-contador hidden>0</span>
     </button>
+    </div>
   </header>
 
   <div class="mazo" data-mazo>
@@ -206,105 +214,47 @@ const provincias = [
 </dialog>
 
 <script>
-  type Precio = { currency_code: string; currency_minor_unit: number };
-  type Item = {
-    key: string;
-    id: number;
-    name: string;
-    quantity: number;
-    images: { thumbnail: string; alt: string }[];
-    totals: Precio & { line_total: string };
-  };
-  type Carrito = {
-    items: Item[];
-    items_count: number;
-    payment_methods: string[];
-    totals: Precio & { total_price: string };
-  };
+  import {
+    crearCliente,
+    type ProductoApi,
+    formato,
+    leerFavoritos,
+    guardarFavoritos,
+    type Carrito,
+  } from '../../scripts/tienda-api';
 
   const raiz = document.querySelector<HTMLElement>('.tienda');
   if (raiz) iniciar(raiz);
 
   function iniciar(raiz: HTMLElement) {
     const API = raiz.dataset.api!;
-    const CLAVE_TOKEN = 'ckoido-cart-token';
-    const CLAVE_FAVS = 'ckoido-favoritos';
     const reducido = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     const mazo = raiz.querySelector<HTMLElement>('[data-mazo]')!;
     const fin = raiz.querySelector<HTMLElement>('[data-fin]')!;
     const aviso = raiz.querySelector<HTMLElement>('[data-aviso]')!;
     const contador = raiz.querySelector<HTMLElement>('[data-contador]')!;
+    const contadorFavs = raiz.querySelector<HTMLElement>('[data-contador-favs]')!;
     const dlgDetalle = document.querySelector<HTMLDialogElement>('[data-dialog-detalle]')!;
     const dlgCarrito = document.querySelector<HTMLDialogElement>('[data-dialog-carrito]')!;
     const formCheckout = dlgCarrito.querySelector<HTMLFormElement>('[data-form-checkout]')!;
 
-    // ---------- almacenamiento local (puede fallar en modo privado) ----------
-    const leer = (k: string) => {
-      try {
-        return localStorage.getItem(k);
-      } catch {
-        return null;
-      }
-    };
-    const guardar = (k: string, v: string | null) => {
-      try {
-        if (v === null) localStorage.removeItem(k);
-        else localStorage.setItem(k, v);
-      } catch {
-        /* sin almacenamiento: el carrito dura mientras la página esté abierta */
-      }
-    };
-    let token = leer(CLAVE_TOKEN);
-    let favoritos = new Set<string>(JSON.parse(leer(CLAVE_FAVS) || '[]'));
-    const guardarFavs = () => guardar(CLAVE_FAVS, JSON.stringify([...favoritos]));
+    const cliente = crearCliente(API);
+    const api = cliente.api;
 
-    // ---------- Store API ----------
+    // ---------- favoritos (compartidos con la página /favoritos) ----------
+    let favoritos = leerFavoritos();
+    const pintarContadorFavs = () => {
+      contadorFavs.textContent = String(favoritos.size);
+      contadorFavs.hidden = favoritos.size === 0;
+    };
+    const guardarFavs = () => {
+      guardarFavoritos(favoritos);
+      pintarContadorFavs();
+    };
+
+    // ---------- carrito ----------
     let carrito: Carrito | null = null;
-
-    async function api<T>(ruta: string, cuerpo?: unknown, reintento = true): Promise<T> {
-      // Sin Cart-Token, WooCommerce exige un nonce en los POST, y desde otro dominio no se
-      // puede leer. Un GET /cart primero entrega el token y con él no hace falta el nonce.
-      if (cuerpo !== undefined && !token) await api('/cart');
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) headers['Cart-Token'] = token;
-      const r = await fetch(API + ruta, {
-        method: cuerpo === undefined ? 'GET' : 'POST',
-        headers,
-        body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo),
-      });
-      const nuevo = r.headers.get('Cart-Token');
-      if (nuevo && nuevo !== token) {
-        token = nuevo;
-        guardar(CLAVE_TOKEN, token);
-      }
-      const datos = await r.json().catch(() => null);
-      if (!r.ok) {
-        // Token vencido o inválido: se empieza un carrito nuevo una sola vez.
-        if ((r.status === 401 || r.status === 403) && token && reintento) {
-          token = null;
-          guardar(CLAVE_TOKEN, null);
-          return api<T>(ruta, cuerpo, false);
-        }
-        const msg = datos?.message ? textoPlano(datos.message) : `Error ${r.status}`;
-        throw new Error(msg);
-      }
-      return datos as T;
-    }
-
-    const textoPlano = (html: string) => {
-      const d = document.createElement('div');
-      d.innerHTML = html;
-      return d.textContent?.trim() || '';
-    };
-
-    const formato = (valor: string, p: Precio) =>
-      new Intl.NumberFormat('es-CR', {
-        style: 'currency',
-        currency: p.currency_code,
-        minimumFractionDigits: 0,
-        maximumFractionDigits: p.currency_minor_unit,
-      }).format(Number(valor) / 10 ** p.currency_minor_unit);
 
     function usarCarrito(c: Carrito) {
       carrito = c;
@@ -313,12 +263,9 @@ const provincias = [
       if (dlgCarrito.open) pintarCarrito();
     }
 
-    const cargarCarrito = () => api<Carrito>('/cart').then(usarCarrito);
-    const agregar = (id: number) => api<Carrito>('/cart/add-item', { id, quantity: 1 }).then(usarCarrito);
-    const cambiar = (key: string, quantity: number) =>
-      api<Carrito>(quantity > 0 ? '/cart/update-item' : '/cart/remove-item', quantity > 0 ? { key, quantity } : { key }).then(
-        usarCarrito,
-      );
+    const cargarCarrito = () => cliente.carrito().then(usarCarrito);
+    const agregar = (id: number) => cliente.agregar(id).then(usarCarrito);
+    const cambiar = (key: string, quantity: number) => cliente.cambiar(key, quantity).then(usarCarrito);
 
     // ---------- avisos ----------
     let avisoTimer = 0;
@@ -344,18 +291,6 @@ const provincias = [
     // La página trae los productos de la última compilación (carga instantánea) y al abrir
     // los compara con WooCommerce: precio, stock, nombre y fotos quedan al día, aparecen
     // los productos nuevos y se quitan los borrados, sin volver a publicar el sitio.
-    type ProductoApi = {
-      id: number;
-      sku: string;
-      name: string;
-      short_description: string;
-      description: string;
-      is_purchasable: boolean;
-      is_in_stock: boolean;
-      stock_availability?: { text: string };
-      images: { src: string; srcset?: string; sizes?: string; alt: string }[];
-      prices: Precio & { price: string };
-    };
     const plantillaTarjeta = raiz.querySelector<HTMLTemplateElement>('template[data-plantilla-tarjeta]')!;
 
     const parrafosDe = (html: string) => {
@@ -420,9 +355,7 @@ const provincias = [
     }
 
     async function refrescarCatalogo() {
-      const r = await fetch(`${API}/products?per_page=100&orderby=title&order=asc`);
-      if (!r.ok) return;
-      const lista = (await r.json()) as ProductoApi[];
+      const lista = await cliente.productos();
       const porId = new Map(tarjetas.map((t) => [Number(t.dataset.id), t]));
       const vivos = new Set(lista.map((p) => p.id));
 
@@ -844,13 +777,27 @@ const provincias = [
 
     pintarMazo();
     raiz.classList.add('lista');
-    if (token) cargarCarrito().catch(() => {});
+    pintarContadorFavs();
+    if (cliente.tieneCarrito()) cargarCarrito().catch(() => {});
+    // /#carrito (p. ej. desde la página de favoritos) abre el carrito.
+    if (location.hash === '#carrito') abrirCarrito();
     refrescarCatalogo().catch(() => {
       /* sin conexión con la tienda: quedan los datos de la última compilación */
     });
     // Al volver a la pestaña (p. ej. después de un rato) se vuelve a consultar.
+    const alVolver = () => {
+      refrescarCatalogo().catch(() => {});
+      favoritos = leerFavoritos();
+      pintarContadorFavs();
+      if (!ocupado && !inicio) pintarMazo();
+      if (cliente.tieneCarrito()) cargarCarrito().catch(() => {});
+    };
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') refrescarCatalogo().catch(() => {});
+      if (document.visibilityState === 'visible') alVolver();
+    });
+    // Volver con «atrás» desde /favoritos (la página puede salir del caché del navegador).
+    window.addEventListener('pageshow', (e) => {
+      if (e.persisted) alVolver();
     });
   }
 </script>
@@ -920,6 +867,17 @@ const provincias = [
     stroke-width: 2;
     stroke-linecap: round;
     stroke-linejoin: round;
+  }
+  .cabecera-botones {
+    display: flex;
+    gap: 10px;
+  }
+  .btn-favs {
+    color: var(--ambar);
+  }
+  .btn-favs svg path {
+    fill: currentColor;
+    stroke: none;
   }
   .btn-carrito svg circle {
     fill: currentColor;

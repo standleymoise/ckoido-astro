@@ -31,6 +31,9 @@ El mismo código se publica también en modo tienda:
   usan la Store API desde el navegador con el encabezado `Cart-Token`: el visitante **nunca sale
   de taxlockedwallet.com**. Los favoritos se guardan en el navegador. WooCommerce solo permite
   CORS desde su propio dominio, así que el carrito no funciona desde `localhost`.
+- **`/favoritos`**: los productos guardados con ↑ (2 columnas en celular), con precio y stock en
+  vivo, «Agregar al carrito» (mismo carrito) y «Quitar». Se abre con la ★ de la barra de la tienda.
+  El cliente de la Store API compartido está en `src/scripts/tienda-api.ts`.
 - Se genera `/productos` (catálogo; no `/tienda`, porque en Hostinger esa carpeta es la del subdominio) y las fichas de producto muestran el precio. «Comprar ahora»
   abre la tienda del inicio con ese producto primero (`/#sku`).
 - Las fichas se enlazan por **SKU**: `ck-oido`, `ck-oido-suave`, `sincerax`.
