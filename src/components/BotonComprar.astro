@@ -1,0 +1,53 @@
+---
+// «Comprar ahora» de una ficha de producto.
+// Con la tienda activa muestra el precio de WooCommerce y agrega el producto al carrito;
+// si no (o si el SKU no existe en la tienda), lleva a «Dónde comprar» como siempre.
+import { getProducto } from '../data/tienda';
+import { rutas } from '../data/sitio';
+
+interface Props {
+  /** SKU del producto en WooCommerce. */
+  sku: string;
+}
+const producto = await getProducto(Astro.props.sku);
+---
+{producto ? (
+  <div class="compra">
+    <p class="precio">
+      <span class="sr-only">Precio: </span>{producto.precio}
+    </p>
+    {producto.enStock ? (
+      <a class="btn" href={producto.comprarUrl}>Comprar ahora</a>
+    ) : (
+      <span class="agotado">Agotado por ahora</span>
+    )}
+  </div>
+) : (
+  <a class="btn" href={rutas.dondeComprar}>Comprar ahora</a>
+)}
+
+<style>
+  .compra {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px 28px;
+    margin-top: clamp(12px, 1.2vw, 22px);
+  }
+  .compra .btn {
+    margin-top: 0;
+  }
+  /* Doble clase para ganarle a los estilos de párrafo de SplitSection */
+  .compra .precio {
+    margin: 0;
+    line-height: 1.2;
+    font-family: var(--font-alt);
+    font-weight: 700;
+    font-size: clamp(24px, 1.7vw, 32px);
+    color: var(--azul-900);
+  }
+  .agotado {
+    font-weight: 600;
+    color: var(--rojo);
+  }
+</style>

@@ -6,7 +6,8 @@ import PageTitle from '../../components/PageTitle.astro';
 import SplitSection from '../../components/SplitSection.astro';
 import Newsletter from '../../components/Newsletter.astro';
 import Footer from '../../components/Footer.astro';
-import { comprarHref, url } from '../../data/sitio';
+import { url } from '../../data/sitio';
+import BotonComprar from '../../components/BotonComprar.astro';
 import fotoCaja from '../../assets/producto/sincerax-caja.jpg';
 import fotoFamilia from '../../assets/producto/sincerax-familia.jpg';
 import fotoFrascos from '../../assets/producto/sincerax-frascos.jpg';
@@ -46,7 +47,7 @@ const beneficios = [
         fosfórico, benzoato de sodio y agua, garantizando una limpieza suave y sin irritaciones, al mismo tiempo que
         puede lavarse con seguridad los restos que pudieran quedar.
       </p>
-      <a class="btn" href={comprarHref}>Comprar ahora</a>
+      <BotonComprar sku="sincerax" />
     </SplitSection>
 
     <section class="beneficios" aria-labelledby="beneficios-titulo">

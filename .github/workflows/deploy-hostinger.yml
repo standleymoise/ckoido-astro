@@ -1,0 +1,54 @@
+name: Deploy to Hostinger (tienda)
+
+# Compila el sitio en modo tienda (lee productos de WooCommerce) y publica el
+# resultado en la rama «hostinger». Hostinger (hPanel → Avanzado → GIT) clona
+# esa rama en public_html de taxlockedwallet.com y se actualiza con su webhook.
+#
+# Se ejecuta al hacer push a main, a mano (Actions → Run workflow) o cuando
+# WooCommerce avisa de un cambio de producto (repository_dispatch «tienda»).
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  repository_dispatch:
+    types: [tienda]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: hostinger
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      BASE_PATH: /
+      SITE_URL: https://taxlockedwallet.com
+      PUBLIC_TIENDA_URL: https://tienda.taxlockedwallet.com
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Build
+        run: |
+          npm ci
+          npm run build
+
+      - name: Publicar en la rama hostinger
+        run: |
+          cd dist
+          git init -q -b hostinger
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Sitio compilado de ${GITHUB_SHA::7}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" hostinger

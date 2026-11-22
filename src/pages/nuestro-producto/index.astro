@@ -6,7 +6,7 @@ import SplitSection from '../../components/SplitSection.astro';
 import ComoUtilizarlas from '../../components/ComoUtilizarlas.astro';
 import Newsletter from '../../components/Newsletter.astro';
 import Footer from '../../components/Footer.astro';
-import { comprarHref } from '../../data/sitio';
+import BotonComprar from '../../components/BotonComprar.astro';
 import fotoCaja from '../../assets/producto/ck-oido-caja.jpg';
 
 const beneficios = [
@@ -40,7 +40,7 @@ const beneficios = [
         combate la humedad generada en el oído, al mismo tiempo que lubrica. Adiós a la sensación de oído húmedo con
         CK Oído.
       </p>
-      <a class="btn" href={comprarHref}>Comprar ahora</a>
+      <BotonComprar sku="ck-oido" />
     </SplitSection>
 
     <ComoUtilizarlas />

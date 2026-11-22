@@ -1,4 +1,5 @@
 // Datos compartidos del sitio (rutas, menú, redes, farmacias).
+import { tiendaActiva } from './tienda';
 
 /** Prefijo del sitio (p. ej. "/ckoido-astro" en GitHub Pages, "" en un dominio propio). */
 export const base = import.meta.env.BASE_URL.replace(/\/$/, '');
@@ -16,10 +17,11 @@ export const rutas = {
   regCertPol: url('/reg-cert-pol'),
   blog: url('/blog'),
   contacto: url('/contacto'),
+  tienda: url('/tienda'),
 };
 
-/** Destino de todos los botones «Comprar ahora». */
-export const comprarHref = rutas.dondeComprar;
+/** Destino de los botones «Comprar ahora»: la tienda si está activa, si no «Dónde comprar». */
+export const comprarHref = tiendaActiva ? rutas.tienda : rutas.dondeComprar;
 
 export const menu = [
   { label: 'Inicio', href: rutas.inicio },

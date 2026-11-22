@@ -1,0 +1,161 @@
+---
+// Página /tienda: catálogo leído de WooCommerce al compilar.
+// Solo se genera cuando PUBLIC_TIENDA_URL está definida (ver src/data/tienda.ts);
+// en GitHub Pages no existe y «Comprar ahora» sigue llevando a «Dónde comprar».
+import { Image } from 'astro:assets';
+import Base from '../layouts/Base.astro';
+import Header from '../components/Header.astro';
+import PageTitle from '../components/PageTitle.astro';
+import Newsletter from '../components/Newsletter.astro';
+import Footer from '../components/Footer.astro';
+import { getProductos, tiendaActiva, tiendaUrl } from '../data/tienda';
+import { rutas } from '../data/sitio';
+
+export function getStaticPaths() {
+  return tiendaActiva ? [{ params: { tienda: 'tienda' } }] : [];
+}
+
+const productos = await getProductos();
+
+// Ficha en este sitio para los productos que la tienen; el resto abre la de WooCommerce.
+const fichas: Record<string, string> = {
+  'ck-oido': rutas.producto,
+  'ck-oido-suave': rutas.producto,
+  sincerax: rutas.sincerax,
+};
+---
+<Base
+  title="Tienda | CK Oído"
+  description="Compre CK Oído y Sincerax en línea: precios, disponibilidad y envío en Costa Rica."
+>
+  <Header />
+  <main>
+    <PageTitle title="Tienda" />
+
+    <section class="tienda container" aria-label="Productos">
+      {productos.length === 0 ? (
+        <p class="vacio">
+          Pronto tendremos productos en línea. Mientras tanto, <a href={rutas.dondeComprar}>vea dónde comprar</a>.
+        </p>
+      ) : (
+        <ul class="lista">
+          {productos.map((p) => (
+            <li class="tarjeta">
+              <a class="foto" href={fichas[p.sku] ?? p.fichaUrl}>
+                {p.imagen && (
+                  <Image
+                    src={p.imagen.src}
+                    alt={p.imagen.alt}
+                    inferSize
+                    format="webp"
+                    widths={[240, 400, 600]}
+                    sizes="(max-width: 640px) 80vw, (max-width: 960px) 40vw, 25vw"
+                  />
+                )}
+              </a>
+              <div class="info">
+                <h2><a href={fichas[p.sku] ?? p.fichaUrl}>{p.nombre}</a></h2>
+                {p.resumen && <p class="resumen">{p.resumen}</p>}
+                <p class="precio">{p.precio}</p>
+                {p.enStock ? (
+                  <a class="btn" href={p.comprarUrl}>Agregar al carrito</a>
+                ) : (
+                  <span class="agotado">Agotado por ahora</span>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+      <p class="nota">
+        El carrito y el pago se procesan de forma segura en <a href={`${tiendaUrl}/carrito/`}>nuestra tienda</a>.
+      </p>
+    </section>
+
+    <Newsletter />
+  </main>
+  <Footer />
+</Base>
+
+<style>
+  .tienda {
+    padding-block: clamp(48px, 5vw, 96px);
+  }
+  .lista {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+    gap: clamp(20px, 2vw, 40px);
+  }
+  .tarjeta {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--borde);
+    border-radius: 16px;
+    overflow: hidden;
+    background: #fff;
+  }
+  .foto {
+    display: block;
+    aspect-ratio: 1;
+    padding: 20px;
+    overflow: hidden;
+    background: linear-gradient(0deg, var(--celeste), var(--blanco-76));
+  }
+  .foto :global(img) {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+  .info {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 12px;
+    padding: 24px;
+  }
+  h2 {
+    margin: 0;
+    font-size: clamp(19px, 1.2vw, 22px);
+    line-height: 1.3;
+  }
+  h2 a {
+    color: var(--azul-900);
+    text-decoration: none;
+  }
+  h2 a:hover {
+    text-decoration: underline;
+  }
+  .resumen {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--texto);
+  }
+  .precio {
+    margin: auto 0 0;
+    font-family: var(--font-alt);
+    font-weight: 700;
+    font-size: 24px;
+    color: var(--azul-900);
+  }
+  .btn {
+    align-self: flex-start;
+    padding: 14px 32px;
+  }
+  .agotado {
+    font-weight: 600;
+    color: var(--rojo);
+  }
+  .vacio,
+  .nota {
+    margin: 32px 0 0;
+    color: var(--texto);
+  }
+  .vacio {
+    margin: 0;
+  }
+</style>
