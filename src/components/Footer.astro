@@ -20,6 +20,7 @@ const year = new Date().getFullYear();
     <div class="abajo">
       <div class="legal">
         <p>© {year} ckoido.com. All rights reserved.</p>
+        <p><button class="instalar-pie" type="button" data-instalar-app hidden>Instalar la app de CK Oído</button></p>
         <p>
           CK Oído respeta y apoya el criterio médico. CK Oído no sustituye ningún tratamiento médico preestablecido,
           consulte con su médico antes de utilizar el producto.
@@ -124,5 +125,17 @@ const year = new Date().getFullYear();
     .redes {
       padding: 0;
     }
+  }
+  .instalar-pie {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+  .instalar-pie[hidden] {
+    display: none;
   }
 </style>

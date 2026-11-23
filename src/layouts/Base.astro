@@ -1,6 +1,7 @@
 ---
 import { Font, getImage } from 'astro:assets';
 import { url } from '../data/sitio';
+import InstalarApp from '../components/InstalarApp.astro';
 import fotoCompartir from '../assets/producto/ck-oido-caja.jpg';
 interface Props {
   title: string;
@@ -68,6 +69,7 @@ const ld = jsonLd ? JSON.stringify(jsonLd).replaceAll('<', '\\u003c') : '';
   </head>
   <body>
     <slot />
+    <InstalarApp nombre="CK Oído" icono={url('/iconos/icono-192.png')} color="#ed2853" clave="ckoido-instalar-cerrado" />
     {import.meta.env.PROD && (
       <script is:inline define:vars={{ sw: url('/sw.js'), scope: url('/') }}>
         // App instalable: el service worker guarda el sitio para abrirlo rápido y sin conexión.

@@ -146,6 +146,11 @@ const provincias = [
       <button class="salir" type="button" data-salir>Cerrar sesión</button>
     </section>
 
+    <button class="instalar-cuenta" type="button" data-instalar-app hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2.5" /><path d="M12 7v7M9 11l3 3 3-3" /></svg>
+      Instalar la app en este teléfono
+    </button>
+
     <p class="aviso" data-aviso role="status" aria-live="polite"></p>
   </main>
 </Base>
@@ -824,5 +829,33 @@ const provincias = [
     .dos {
       grid-template-columns: 1fr;
     }
+  }
+  .instalar-cuenta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    margin: 18px 0 0;
+    padding: 13px 18px;
+    border: 1.5px dashed currentColor;
+    border-radius: 16px;
+    background: none;
+    color: var(--azul-600);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .instalar-cuenta[hidden] {
+    display: none;
+  }
+  .instalar-cuenta svg {
+    width: 22px;
+    height: 22px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
   }
 </style>
