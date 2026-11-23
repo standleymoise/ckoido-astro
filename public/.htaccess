@@ -16,9 +16,11 @@ Options -Indexes
   AddOutputFilterByType DEFLATE text/html text/css text/plain text/xml application/javascript application/xml image/svg+xml
 </IfModule>
 
+AddType application/manifest+json .webmanifest
+
 <IfModule mod_headers.c>
   # Las páginas se revisan en cada visita (así un deploy se ve enseguida)…
-  <FilesMatch "\.(html|xml|txt)$">
+  <FilesMatch "(\.(html|xml|txt|webmanifest)|^sw\.js)$">
     Header set Cache-Control "no-cache"
   </FilesMatch>
 </IfModule>

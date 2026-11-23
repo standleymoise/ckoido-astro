@@ -57,12 +57,25 @@ const ld = jsonLd ? JSON.stringify(jsonLd).replaceAll('<', '\\u003c') : '';
     <meta property="og:image" content={imagenOg} />
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="sitemap" href={url('/sitemap-index.xml')} />
+    <link rel="manifest" href={url('/manifest.webmanifest')} />
+    <link rel="apple-touch-icon" href={url('/iconos/apple-180.png')} />
+    <meta name="apple-mobile-web-app-title" content="CK Oído" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="theme-color" content="#0a4383" />
     <Font cssVariable="--fuente-texto" preload={[{ weight: 400 }]} />
     <Font cssVariable="--fuente-titulos" />
     {ld && <script type="application/ld+json" set:html={ld} />}
   </head>
   <body>
     <slot />
+    {import.meta.env.PROD && (
+      <script is:inline define:vars={{ sw: url('/sw.js'), scope: url('/') }}>
+        // App instalable: el service worker guarda el sitio para abrirlo rápido y sin conexión.
+        if ('serviceWorker' in navigator) {
+          addEventListener('load', () => navigator.serviceWorker.register(sw, { scope }).catch(() => {}));
+        }
+      </script>
+    )}
   </body>
 </html>
 

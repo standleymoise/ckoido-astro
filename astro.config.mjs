@@ -37,6 +37,6 @@ export default defineConfig({
   prefetch: { prefetchAll: true, defaultStrategy: 'hover' },
   integrations: [
     // sitemap-index.xml con todas las páginas, menos las personales.
-    sitemap({ filter: (pagina) => !/\/(favoritos|cuenta)\/?$/.test(pagina) }),
+    sitemap({ filter: (pagina) => !/\/(favoritos|cuenta|sin-conexion)\/?$/.test(pagina) }),
   ],
 });
