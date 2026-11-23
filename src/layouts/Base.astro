@@ -2,6 +2,7 @@
 import { Font, getImage } from 'astro:assets';
 import { url } from '../data/sitio';
 import InstalarApp from '../components/InstalarApp.astro';
+import { tiendaUrl } from '../data/tienda';
 import fotoCompartir from '../assets/producto/ck-oido-caja.jpg';
 interface Props {
   title: string;
@@ -57,6 +58,8 @@ const ld = jsonLd ? JSON.stringify(jsonLd).replaceAll('<', '\\u003c') : '';
     <meta property="og:description" content={description} />
     <meta property="og:image" content={imagenOg} />
     <meta name="twitter:card" content="summary_large_image" />
+    {/* Abre la conexión con WooCommerce mientras carga la página: el carrito responde antes. */}
+    {tiendaUrl && <link rel="preconnect" href={tiendaUrl} crossorigin />}
     <link rel="sitemap" href={url('/sitemap-index.xml')} />
     <link rel="manifest" href={url('/manifest.webmanifest')} />
     <link rel="apple-touch-icon" href={url('/iconos/apple-180.png')} />

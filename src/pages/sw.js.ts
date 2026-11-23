@@ -3,7 +3,9 @@
 //
 // Qué guarda y qué no:
 // - /_astro/* (JS, CSS, fuentes, fotos optimizadas): primero la caché; los nombres cambian por versión.
-// - Páginas: primero la red (precios y textos al día); sin conexión, la última copia o /sin-conexion/.
+// - Páginas: primero la red (precios y textos al día), pero si el servidor tarda más de 1 s y hay
+//   una copia guardada, se muestra la copia y la respuesta nueva queda guardada para la próxima.
+//   Sin conexión: la última copia o /sin-conexion/.
 // - Otros dominios (la API de WooCommerce: catálogo, carrito, cuenta, pagos): NUNCA se tocan.
 import type { APIRoute } from 'astro';
 import { app } from '../data/pwa';
@@ -12,6 +14,8 @@ import { app } from '../data/pwa';
 function serviceWorker(CACHE: string, PREFIJO: string, BASE: string) {
   const sw = self as unknown as ServiceWorkerGlobalScope;
   const SIN_CONEXION = BASE + '/sin-conexion/';
+  // Cuánto se espera al servidor antes de mostrar la copia guardada de una página.
+  const ESPERA_MS = 1000;
 
   sw.addEventListener('install', (e) => {
     e.waitUntil(
@@ -52,15 +56,19 @@ function serviceWorker(CACHE: string, PREFIJO: string, BASE: string) {
     }
 
     if (pedido.mode === 'navigate') {
+      const red = fetch(pedido).then((resp) => guardar(pedido, resp));
+      // Aunque se muestre la copia, la respuesta de la red se termina de guardar.
+      e.waitUntil(red.catch(() => undefined));
+      const copia = () => caches.match(pedido, { ignoreSearch: true });
+      const esperar = new Promise<Response | undefined>((listo) =>
+        setTimeout(() => copia().then(listo), ESPERA_MS),
+      );
       e.respondWith(
-        fetch(pedido)
-          .then((resp) => guardar(pedido, resp))
-          .catch(() =>
-            caches
-              .match(pedido, { ignoreSearch: true })
-              .then((r) => r || caches.match(SIN_CONEXION))
-              .then((r) => r || Response.error()),
-          ),
+        Promise.race([red, esperar.then((r) => r || red)]).catch(() =>
+          copia()
+            .then((r) => r || caches.match(SIN_CONEXION))
+            .then((r) => r || Response.error()),
+        ),
       );
       return;
     }
