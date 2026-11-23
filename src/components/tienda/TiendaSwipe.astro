@@ -126,6 +126,20 @@ const provincias = [
     <span aria-hidden="true">→</span> carrito · <span aria-hidden="true">←</span> pasar ·
     <span aria-hidden="true">↑</span> favorito · <span aria-hidden="true">↓</span> detalle
   </p>
+  <!-- Enlaces al resto del sitio: sin ellos Google no llega a las demás páginas desde el inicio. -->
+  <nav class="ayuda enlaces-sitio" aria-label="Más de CK Oído">
+    {[
+      [rutas.tienda, 'Todos los productos'],
+      [rutas.producto, 'CK Oído'],
+      [rutas.sincerax, 'Sincerax'],
+      [rutas.otitis, 'Otitis externa'],
+      [rutas.blog, 'Blog'],
+      [rutas.nosotros, 'Nosotros'],
+      [rutas.contacto, 'Contacto'],
+    ].map(([href, texto], i) => (
+      <>{i > 0 && ' · '}<a href={href}>{texto}</a></>
+    ))}
+  </nav>
 
   <!-- Molde para productos nuevos que aparecen en WooCommerce después de compilar -->
   <template data-plantilla-tarjeta>
@@ -903,6 +917,14 @@ const provincias = [
     font-size: 13px;
     text-align: center;
     color: var(--texto);
+  }
+  .enlaces-sitio {
+    max-width: 420px;
+    margin: 6px auto 0;
+    line-height: 1.9;
+  }
+  .enlaces-sitio a {
+    color: var(--azul-600, inherit);
   }
   .btn-carrito {
     position: relative;

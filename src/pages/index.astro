@@ -20,10 +20,27 @@ import { getProductos, tiendaActiva } from '../data/tienda';
 // en GitHub Pages sigue siendo el inicio informativo del Figma.
 const productos = await getProductos();
 const posts = tiendaActiva ? [] : (await getPosts()).slice(0, 4);
+
+const sitio = new URL(import.meta.env.BASE_URL, Astro.site ?? Astro.url).href;
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': tiendaActiva ? 'OnlineStore' : 'Organization',
+      name: 'CK Oído',
+      url: sitio,
+      logo: new URL('img/logo-ck.svg', sitio).href,
+      description: 'Gotas de uso tópico que secan el agua atrapada en el oído y ayudan a prevenir infecciones del oído externo.',
+      parentOrganization: { '@type': 'Organization', name: 'Roleisa Farmacéutica' },
+    },
+    { '@type': 'WebSite', name: 'CK Oído', url: sitio, inLanguage: 'es-CR' },
+  ],
+};
 ---
 <Base
   title={tiendaActiva ? 'Tienda CK Oído | Gotas para los oídos' : 'CK Oído | Gotas para prevenir infecciones en los oídos'}
   description="CK Oído: gotas de uso tópico que secan el agua atrapada en el oído después de nadar o bañarse y ayudan a prevenir infecciones del oído externo."
+  jsonLd={jsonLd}
 >
   {tiendaActiva ? (
     <TiendaSwipe productos={productos} />

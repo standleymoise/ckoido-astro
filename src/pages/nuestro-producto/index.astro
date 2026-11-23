@@ -8,6 +8,22 @@ import Newsletter from '../../components/Newsletter.astro';
 import Footer from '../../components/Footer.astro';
 import BotonComprar from '../../components/BotonComprar.astro';
 import fotoCaja from '../../assets/producto/ck-oido-caja.jpg';
+import { getProductos } from '../../data/tienda';
+import { rutas } from '../../data/sitio';
+import { productoLd, migasLd, absoluta } from '../../data/seo';
+
+// Datos para Google: los dos productos de esta página (con precio de WooCommerce, si la tienda está activa).
+const aqui = absoluta(rutas.producto + '/', Astro.site, Astro.url);
+const productosLd = (await getProductos())
+  .filter((p) => p.sku === 'ck-oido' || p.sku === 'ck-oido-suave')
+  .map((p) => productoLd(p, aqui));
+const jsonLd = [
+  ...productosLd,
+  migasLd([
+    ['Inicio', absoluta(rutas.inicio, Astro.site, Astro.url)],
+    ['Nuestro producto', aqui],
+  ]),
+];
 
 const beneficios = [
   'CK Oído seca y alivia la incomodidad de los oídos obstruidos por el agua.',
@@ -19,6 +35,9 @@ const beneficios = [
 <Base
   title="Nuestro producto | CK Oído"
   description="CK Oído: gotas que secan el agua atrapada en los oídos y ayudan a prevenir infecciones del oído externo. Conozca cómo utilizarlas."
+  imagen={fotoCaja}
+  tipo={productosLd.length ? 'product' : 'website'}
+  jsonLd={jsonLd}
 >
   <Header />
   <main>

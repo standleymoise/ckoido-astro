@@ -25,8 +25,20 @@ interface Props {
 const { post, otros } = Astro.props;
 const { title, date, excerpt, image, imageAlt } = post.data;
 const { Content } = await render(post);
+
+const aqui = new URL(Astro.url.pathname, Astro.site ?? Astro.url).href;
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BlogPosting',
+  headline: title,
+  description: excerpt,
+  datePublished: date.toISOString(),
+  mainEntityOfPage: aqui,
+  author: { '@type': 'Organization', name: 'CK Oído' },
+  publisher: { '@type': 'Organization', name: 'CK Oído' },
+};
 ---
-<Base title={`${title} | Blog CK Oído`} description={excerpt}>
+<Base title={`${title} | Blog CK Oído`} description={excerpt} imagen={image} tipo="article" jsonLd={jsonLd}>
   <Header />
   <main>
     <PageTitle title="Blog" />

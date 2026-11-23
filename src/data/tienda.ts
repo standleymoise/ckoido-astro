@@ -20,6 +20,9 @@ export interface Producto {
   /** Descripción larga, en párrafos de texto plano. */
   descripcion: string[];
   precio: string;
+  /** Precio como número decimal («6500») y moneda ISO («CRC»), para los datos estructurados. */
+  precioNumero: string;
+  moneda: string;
   enStock: boolean;
   /** «50 disponibles», «Agotado»… tal como lo dice WooCommerce. */
   stockTexto: string;
@@ -74,6 +77,8 @@ const aProducto = (p: StoreApiProducto): Producto => ({
   resumen: sinHtml(p.short_description),
   descripcion: parrafos(p.description),
   precio: formatoPrecio(p.prices.price, p.prices.currency_code, p.prices.currency_minor_unit),
+  precioNumero: (Number(p.prices.price) / 10 ** p.prices.currency_minor_unit).toFixed(p.prices.currency_minor_unit),
+  moneda: p.prices.currency_code,
   enStock: p.is_purchasable && p.is_in_stock,
   stockTexto: p.stock_availability?.text || (p.is_in_stock ? 'Disponible' : 'Agotado'),
   imagen: p.images[0] ? { src: p.images[0].src, alt: p.images[0].alt || p.name } : undefined,

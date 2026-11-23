@@ -1,14 +1,37 @@
 ---
+import { Font, getImage } from 'astro:assets';
 import { url } from '../data/sitio';
+import fotoCompartir from '../assets/producto/ck-oido-caja.jpg';
 interface Props {
   title: string;
   description?: string;
+  /** Páginas personales (cuenta, favoritos): no se indexan. */
+  noindex?: boolean;
+  /** Imagen al compartir: URL absoluta, o una imagen importada de src/assets. */
+  imagen?: string | ImageMetadata;
+  tipo?: 'website' | 'article' | 'product';
+  /** Datos estructurados (schema.org): un objeto o una lista. */
+  jsonLd?: object | object[];
 }
-const { title, description = 'CK Oído: gotas para secar el agua atrapada en el oído y prevenir infecciones del oído externo.' } = Astro.props;
+const {
+  title,
+  description = 'CK Oído: gotas para secar el agua atrapada en el oído y prevenir infecciones del oído externo.',
+  noindex = false,
+  imagen = fotoCompartir,
+  tipo = 'website',
+  jsonLd,
+} = Astro.props;
 // Dominio oficial (SITE_URL). Si alguien entra por otra variante (p. ej. www.), se le manda al oficial:
 // la tienda solo acepta llamadas (CORS) desde ese dominio, así que por www el carrito no funcionaría.
 const hostOficial = Astro.site?.host ?? '';
 const canonica = new URL(Astro.url.pathname, Astro.site ?? Astro.url).href;
+// Imagen para WhatsApp/Facebook: las importadas se exportan en JPG de 1200 px (WebP no siempre se ve).
+const imagenOg =
+  typeof imagen === 'string'
+    ? imagen
+    : new URL((await getImage({ src: imagen, width: 1200, format: 'jpg' })).src, Astro.site ?? Astro.url).href;
+// JSON dentro de <script>: «<» escapado para que un texto con «</script>» no rompa la página.
+const ld = jsonLd ? JSON.stringify(jsonLd).replaceAll('<', '\\u003c') : '';
 ---
 <!doctype html>
 <html lang="es">
@@ -24,12 +47,19 @@ const canonica = new URL(Astro.url.pathname, Astro.site ?? Astro.url).href;
     <link rel="icon" type="image/svg+xml" href={url("/favicon.svg")} />
     <title>{title}</title>
     <meta name="description" content={description} />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sarabun:wght@500;800&display=swap"
-      rel="stylesheet"
-    />
+    {noindex && <meta name="robots" content="noindex" />}
+    <meta property="og:type" content={tipo} />
+    <meta property="og:site_name" content="CK Oído" />
+    <meta property="og:locale" content="es_CR" />
+    <meta property="og:url" content={canonica} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={imagenOg} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="sitemap" href={url('/sitemap-index.xml')} />
+    <Font cssVariable="--fuente-texto" preload={[{ weight: 400 }]} />
+    <Font cssVariable="--fuente-titulos" />
+    {ld && <script type="application/ld+json" set:html={ld} />}
   </head>
   <body>
     <slot />
@@ -50,8 +80,9 @@ const canonica = new URL(Astro.url.pathname, Astro.site ?? Astro.url).href;
     --blanco-76: rgba(255, 255, 255, 0.76);
     --borde: rgba(4, 116, 186, 0.29);
 
-    --font-sans: 'Inter', system-ui, sans-serif;
-    --font-alt: 'Sarabun', 'Inter', system-ui, sans-serif;
+    /* Fuentes servidas desde el propio dominio (ver «fonts» en astro.config.mjs) */
+    --font-sans: var(--fuente-texto);
+    --font-alt: var(--fuente-titulos), var(--fuente-texto);
 
     /* Ancho de contenido del Figma: 1665px dentro de 1920px */
     --gutter: clamp(16px, 6.6vw, 128px);

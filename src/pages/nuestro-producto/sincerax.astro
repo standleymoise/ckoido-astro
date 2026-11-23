@@ -11,6 +11,20 @@ import BotonComprar from '../../components/BotonComprar.astro';
 import fotoCaja from '../../assets/producto/sincerax-caja.jpg';
 import fotoFamilia from '../../assets/producto/sincerax-familia.jpg';
 import fotoFrascos from '../../assets/producto/sincerax-frascos.jpg';
+import { getProducto } from '../../data/tienda';
+import { rutas } from '../../data/sitio';
+import { productoLd, migasLd, absoluta } from '../../data/seo';
+
+const aqui = absoluta(rutas.sincerax + '/', Astro.site, Astro.url);
+const producto = await getProducto('sincerax');
+const jsonLd = [
+  ...(producto ? [productoLd(producto, aqui)] : []),
+  migasLd([
+    ['Inicio', absoluta(rutas.inicio, Astro.site, Astro.url)],
+    ['Nuestro producto', absoluta(rutas.producto + '/', Astro.site, Astro.url)],
+    ['Sincerax', aqui],
+  ]),
+];
 
 const beneficios = [
   'Efectividad comprobada para disolver incluso los tapones más difíciles.',
@@ -25,6 +39,9 @@ const beneficios = [
 <Base
   title="Sincerax | CK Oído"
   description="Sincerax: solución para disolver de forma segura y efectiva el exceso de cera en los oídos, apta para toda la familia."
+  imagen={fotoCaja}
+  tipo={producto ? 'product' : 'website'}
+  jsonLd={jsonLd}
 >
   <Header />
   <main>

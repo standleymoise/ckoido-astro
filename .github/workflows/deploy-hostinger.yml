@@ -13,6 +13,9 @@ on:
   workflow_dispatch:
   repository_dispatch:
     types: [tienda]
+  # Recompilar cada día: precio, stock y datos para Google quedan al día. 10:00 UTC = 4:00 en Costa Rica.
+  schedule:
+    - cron: '0 10 * * *'
 
 permissions:
   contents: write

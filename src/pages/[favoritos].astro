@@ -23,7 +23,7 @@ const iniciales = (await getProductos()).map((p) => ({
   alt: p.imagen?.alt ?? p.nombre,
 }));
 ---
-<Base title="Mis favoritos | Tienda CK Oído" description="Los productos de CK Oído que guardó como favoritos.">
+<Base title="Mis favoritos | Tienda CK Oído" description="Los productos de CK Oído que guardó como favoritos." noindex>
   <main class="favs" data-api={storeApiUrl} data-inicio={rutas.inicio}>
     <header class="cabecera">
       <a class="volver" href={rutas.inicio}>
