@@ -5,11 +5,21 @@ interface Props {
   description?: string;
 }
 const { title, description = 'CK Oído: gotas para secar el agua atrapada en el oído y prevenir infecciones del oído externo.' } = Astro.props;
+// Dominio oficial (SITE_URL). Si alguien entra por otra variante (p. ej. www.), se le manda al oficial:
+// la tienda solo acepta llamadas (CORS) desde ese dominio, así que por www el carrito no funcionaría.
+const hostOficial = Astro.site?.host ?? '';
+const canonica = new URL(Astro.url.pathname, Astro.site ?? Astro.url).href;
 ---
 <!doctype html>
 <html lang="es">
   <head>
+    <script is:inline define:vars={{ hostOficial }}>
+      if (hostOficial && location.host !== hostOficial && location.host === 'www.' + hostOficial) {
+        location.replace(location.protocol + '//' + hostOficial + location.pathname + location.search + location.hash);
+      }
+    </script>
     <meta charset="utf-8" />
+    <link rel="canonical" href={canonica} />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/svg+xml" href={url("/favicon.svg")} />
     <title>{title}</title>
