@@ -4,7 +4,10 @@
 //   ↑ arriba: guardar en favoritos  ↓ abajo: ver el detalle
 // El carrito y el checkout usan la Store API de WooCommerce desde el navegador
 // (con el encabezado Cart-Token), así que el visitante nunca sale del sitio.
+// Entre los productos van tarjetas de «Opiniones» (testimonios de WordPress: CPT UI + ACF): se
+// deslizan en cualquier dirección para pasar a la siguiente, sin tocar carrito ni favoritos.
 import { Image } from 'astro:assets';
+import type { CollectionEntry } from 'astro:content';
 import Logo from '../Logo.astro';
 import { rutas } from '../../data/sitio';
 import type { Producto } from '../../data/tienda';
@@ -12,8 +15,26 @@ import { storeApiUrl } from '../../data/tienda';
 
 interface Props {
   productos: Producto[];
+  testimonios?: CollectionEntry<'testimonios'>[];
 }
-const { productos } = Astro.props;
+const { productos, testimonios = [] } = Astro.props;
+
+// Una opinión cada CADA productos (las que sobran van al final del mazo).
+const CADA = 3;
+// Lista plana para el template: cada elemento es un producto (p, i) o una opinión (t).
+type Elemento = { tipo: 'producto' | 'opinion'; p: Producto; i: number; t: CollectionEntry<'testimonios'> };
+const elementos: Elemento[] = [];
+let siguienteOpinion = 0;
+productos.forEach((p, i) => {
+  elementos.push({ tipo: 'producto', p, i } as Elemento);
+  if ((i + 1) % CADA === 0 && siguienteOpinion < testimonios.length) {
+    elementos.push({ tipo: 'opinion', t: testimonios[siguienteOpinion++] } as Elemento);
+  }
+});
+for (; siguienteOpinion < testimonios.length; siguienteOpinion++) {
+  elementos.push({ tipo: 'opinion', t: testimonios[siguienteOpinion] } as Elemento);
+}
+const parrafos = (texto: string) => texto.split(/\n{2,}/).map((x) => x.trim()).filter(Boolean);
 
 const provincias = [
   ['CR-SJ', 'San José'],
@@ -49,7 +70,64 @@ const provincias = [
   </header>
 
   <div class="mazo" data-mazo>
-    {productos.map((p, i) => (
+    {elementos.map(({ tipo, p, i, t }) => tipo === 'opinion' ? (
+      <article
+        class="tarjeta opinion"
+        data-tipo="opinion"
+        data-nombre={t.data.nombre}
+        aria-roledescription="tarjeta de opinión"
+        aria-label={`Opinión de ${t.data.nombre}`}
+      >
+        <span class="badge-opiniones">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18V12.5C4 8.4 6.2 6 9.5 5.5V8C7.7 8.5 7 9.8 7 11.5h3V18zM14 18v-5.5c0-4.1 2.2-6.5 5.5-7V8c-1.8.5-2.5 1.8-2.5 3.5h3V18z" /></svg>
+          Opiniones
+        </span>
+        <div class="foto opinion-cuerpo">
+          {t.data.estrellas && (
+            <p class="opinion-estrellas" aria-label={`${t.data.estrellas} de 5 estrellas`}>
+              <span aria-hidden="true">{'★'.repeat(t.data.estrellas)}{'☆'.repeat(5 - t.data.estrellas)}</span>
+            </p>
+          )}
+          <blockquote class="opinion-texto">
+            {parrafos(t.data.texto).map((x) => <p>{x}</p>)}
+          </blockquote>
+        </div>
+        <span class="sello sello-carrito" aria-hidden="true">Al carrito</span>
+        <span class="sello sello-pasar" aria-hidden="true">Paso</span>
+        <span class="sello sello-favorito" aria-hidden="true">Favorito</span>
+        <div class="info opinion-autor">
+          {t.data.foto && (
+            <Image
+              src={t.data.foto.url}
+              alt=""
+              inferSize
+              format="webp"
+              widths={[56, 112]}
+              sizes="56px"
+              loading="lazy"
+              draggable="false"
+            />
+          )}
+          <div>
+            <h2>{t.data.nombre}</h2>
+            {t.data.cargo && <p class="opinion-cargo">{t.data.cargo}</p>}
+          </div>
+        </div>
+        <template data-detalle>
+          <p class="badge-opiniones">Opiniones</p>
+          {t.data.estrellas && (
+            <p class="opinion-estrellas" aria-label={`${t.data.estrellas} de 5 estrellas`}>
+              <span aria-hidden="true">{'★'.repeat(t.data.estrellas)}{'☆'.repeat(5 - t.data.estrellas)}</span>
+            </p>
+          )}
+          <blockquote class="opinion-texto-completo">
+            {parrafos(t.data.texto).map((x) => <p>{x}</p>)}
+          </blockquote>
+          <h2>{t.data.nombre}</h2>
+          {t.data.cargo && <p class="opinion-cargo">{t.data.cargo}</p>}
+        </template>
+      </article>
+    ) : (
       <article
         class="tarjeta"
         data-id={p.id}
@@ -375,8 +453,9 @@ const provincias = [
       const vivos = new Set(lista.map((p) => p.id));
 
       // Quitar los que ya no están publicados (ajustando la posición del mazo).
+      // Las tarjetas de opinión no son productos: se quedan.
       for (const t of [...tarjetas]) {
-        if (vivos.has(Number(t.dataset.id))) continue;
+        if (t.dataset.tipo === 'opinion' || vivos.has(Number(t.dataset.id))) continue;
         const i = orden.indexOf(t);
         if (i > -1 && i < pos) pos--;
         if (i > -1) orden.splice(i, 1);
@@ -435,6 +514,16 @@ const provincias = [
     async function decidir(accion: Accion) {
       const t = actual();
       if (!t || ocupado) return;
+      // Opinión: sale volando hacia donde se deslizó y aparece la siguiente; nada más.
+      if (t.dataset.tipo === 'opinion') {
+        ocupado = true;
+        await volar(t, accion);
+        historial.push({ tarjeta: t, accion: 'pasar' });
+        pos++;
+        pintarMazo();
+        ocupado = false;
+        return;
+      }
       if (accion === 'carrito' && t.dataset.stock !== '1') {
         avisar('Este producto está agotado por ahora.');
         rebotar(t);
@@ -555,6 +644,9 @@ const provincias = [
       const plantilla = t.querySelector<HTMLTemplateElement>('template[data-detalle]')!;
       const cuerpo = dlgDetalle.querySelector<HTMLElement>('[data-detalle-cuerpo]')!;
       cuerpo.replaceChildren(plantilla.content.cloneNode(true));
+      // En una opinión no hay «Favorito» ni «Agregar al carrito».
+      dlgDetalle.querySelector<HTMLElement>('.hoja-pie')!.hidden = t.dataset.tipo === 'opinion';
+      dlgDetalle.classList.toggle('es-opinion', t.dataset.tipo === 'opinion');
       dlgDetalle.showModal();
     }
 
@@ -1301,6 +1393,9 @@ const provincias = [
   .hoja-cuerpo :global(.resumen) {
     font-weight: 600;
   }
+  .hoja-pie[hidden] {
+    display: none;
+  }
   .hoja-pie {
     display: flex;
     gap: 12px;
@@ -1586,5 +1681,100 @@ const provincias = [
     .aviso {
       transition: none;
     }
+  }
+
+  /* ---------- tarjetas de opinión (testimonios de WordPress) ---------- */
+  .badge-opiniones {
+    position: absolute;
+    z-index: 1;
+    top: 16px;
+    left: 16px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px 6px 10px;
+    border-radius: 999px;
+    background: var(--azul-900);
+    color: #fff;
+    font-family: var(--font-alt);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .badge-opiniones svg {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+  }
+  .opinion .sello {
+    display: none;
+  }
+  .opinion-cuerpo {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 14px;
+    padding: 64px 28px 24px;
+    overflow: hidden;
+    background: linear-gradient(160deg, var(--celeste), #fff 70%);
+  }
+  .opinion-estrellas {
+    margin: 0;
+    color: var(--ambar, #f5a623);
+    font-size: 22px;
+    letter-spacing: 3px;
+  }
+  .opinion-texto {
+    position: relative;
+    margin: 0;
+    font-family: var(--font-alt);
+    font-size: clamp(19px, 2.4vh, 24px);
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--azul-900);
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 8;
+    line-clamp: 8;
+    overflow: hidden;
+  }
+  .opinion-texto p {
+    margin: 0 0 10px;
+  }
+  .opinion-texto p:first-child::before {
+    content: '“';
+  }
+  .opinion-texto p:last-child::after {
+    content: '”';
+  }
+  .opinion-autor {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .opinion-autor img {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    object-fit: cover;
+    pointer-events: none;
+  }
+  .opinion-autor h2 {
+    font-size: 18px;
+  }
+  .opinion-cargo {
+    margin: 2px 0 0;
+    font-size: 14px;
+    color: var(--texto);
+  }
+  .hoja-cuerpo :global(.badge-opiniones) {
+    position: static;
+  }
+  .hoja-cuerpo :global(.opinion-texto-completo) {
+    margin: 12px 0 16px;
+    font-size: 18px;
+    line-height: 1.55;
+    color: var(--azul-900);
   }
 </style>
