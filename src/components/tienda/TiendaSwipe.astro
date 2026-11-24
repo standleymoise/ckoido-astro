@@ -963,6 +963,28 @@ const provincias = [
     flex-direction: column;
     gap: 12px;
   }
+  /* Celular: la tarjeta no puede tapar los botones ni las instrucciones de abajo.
+     svh = la pantalla con las barras del navegador visibles (lo que de verdad se ve al abrir);
+     dvh crece cuando las barras se esconden y en algunos navegadores empujaba todo hacia abajo.
+     Se reservan ~240 px para el encabezado, los botones y la ayuda, y la tarjeta usa el resto. */
+  @media (max-width: 640px) {
+    .tienda {
+      height: 100vh;
+      height: 100svh;
+      gap: 10px;
+    }
+    .mazo {
+      flex: 1 1 auto;
+      min-height: 260px;
+      max-height: min(540px, calc(100svh - 240px));
+    }
+    .foto {
+      padding: 14px;
+    }
+    .info {
+      padding: 14px 18px 16px;
+    }
+  }
   @media (max-height: 540px) {
     .tienda {
       height: auto;
@@ -971,6 +993,7 @@ const provincias = [
     .mazo {
       flex: none !important;
       height: 440px;
+      max-height: none;
     }
   }
   .cabecera {
