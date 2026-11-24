@@ -966,17 +966,19 @@ const provincias = [
   /* Celular: la tarjeta no puede tapar los botones ni las instrucciones de abajo.
      svh = la pantalla con las barras del navegador visibles (lo que de verdad se ve al abrir);
      dvh crece cuando las barras se esconden y en algunos navegadores empujaba todo hacia abajo.
-     Se reservan ~240 px para el encabezado, los botones y la ayuda, y la tarjeta usa el resto. */
+     El encabezado, los botones y la ayuda tienen su alto fijo y la tarjeta usa todo el resto. */
   @media (max-width: 640px) {
     .tienda {
       height: 100vh;
       height: 100svh;
       gap: 10px;
     }
+    /* Elástica: llena todo el alto que queda entre el encabezado y los botones (teléfono largo =
+       tarjeta más alta, sin hueco abajo), con un respiro arriba para no pegarse al encabezado. */
     .mazo {
       flex: 1 1 auto;
       min-height: 260px;
-      max-height: min(540px, calc(100svh - 240px));
+      margin-top: 6px;
     }
     .foto {
       padding: 14px;
@@ -1708,6 +1710,48 @@ const provincias = [
     .accion.chica {
       width: 46px;
       height: 46px;
+    }
+  }
+  /* Encabezado en celular: logo y botones más chicos para que no se encimen
+     (en 360 px de ancho el logo chocaba con favoritos). */
+  @media (max-width: 480px) {
+    .cabecera {
+      min-height: 46px;
+      gap: 6px;
+    }
+    /* Logo.astro calcula su escala con calc(px / número), que da una medida y no un número: el
+       navegador la ignora y el logo siempre sale a 173 px. Aquí se fija la escala directamente
+       (solo en el swipe, para no cambiar el resto de páginas). */
+    .cabecera :global(.logo) {
+      --u: 0.6 !important;
+    }
+    .cabecera-botones {
+      gap: 6px;
+    }
+    .cabecera .btn-carrito {
+      width: 44px;
+      height: 44px;
+    }
+    .cabecera .btn-carrito svg {
+      width: 22px;
+      height: 22px;
+    }
+    .cabecera .contador {
+      top: -5px;
+      right: -5px;
+      min-width: 19px;
+      height: 19px;
+      font-size: 11px;
+      line-height: 19px;
+    }
+  }
+  @media (max-width: 360px) {
+    .cabecera :global(.logo) {
+      --u: 0.54 !important;
+    }
+    .cabecera .btn-carrito {
+      width: 40px;
+      height: 40px;
     }
   }
   @media (prefers-reduced-motion: reduce) {
