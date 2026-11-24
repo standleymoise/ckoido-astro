@@ -1,0 +1,23 @@
+[
+  {
+    "key": "group_ck_banner",
+    "title": "Banner",
+    "fields": [
+      { "key": "field_ck_banner_imagen", "label": "Imagen", "name": "imagen", "type": "image", "required": 1, "return_format": "array", "preview_size": "medium", "library": "all", "mime_types": "jpg,jpeg,png,webp", "instructions": "Vertical, como una tarjeta del swipe (ideal 900 × 1200 px). Lo importante, al centro." },
+      { "key": "field_ck_banner_etiqueta", "label": "Etiqueta", "name": "etiqueta", "type": "text", "placeholder": "Promo", "maxlength": 18, "instructions": "El cartelito de arriba. Vacío = «Promo»." },
+      { "key": "field_ck_banner_texto", "label": "Texto", "name": "texto", "type": "textarea", "rows": 2, "maxlength": 140, "new_lines": "", "instructions": "Una o dos líneas debajo del título (el título es el de la entrada)." },
+      { "key": "field_ck_banner_boton", "label": "Texto del botón", "name": "boton", "type": "text", "placeholder": "Ver más", "maxlength": 24 },
+      { "key": "field_ck_banner_enlace", "label": "Enlace", "name": "enlace", "type": "text", "placeholder": "/productos/", "instructions": "Adónde lleva al tocarlo: una página del sitio (/productos/), otra web (https://…) o WhatsApp (https://wa.me/506…). Vacío = sin enlace." },
+      { "key": "field_ck_banner_solo_imagen", "label": "La imagen ya trae el texto", "name": "solo_imagen", "type": "true_false", "ui": 1, "instructions": "Actívelo si el diseño ya incluye título y texto: no se escribe nada encima (solo el botón)." },
+      { "key": "field_ck_banner_posicion", "label": "Posición en el swipe", "name": "posicion", "type": "number", "default_value": 0, "min": 0, "step": 1, "instructions": "Después de cuántos productos aparece. 0 = primera tarjeta." },
+      { "key": "field_ck_banner_inicio", "label": "Mostrar desde", "name": "inicio", "type": "date_picker", "display_format": "d/m/Y", "return_format": "Ymd", "first_day": 1, "wrapper": { "width": "50" } },
+      { "key": "field_ck_banner_fin", "label": "Mostrar hasta", "name": "fin", "type": "date_picker", "display_format": "d/m/Y", "return_format": "Ymd", "first_day": 1, "wrapper": { "width": "50" }, "instructions": "Vacío = sin fecha de fin. El último día se muestra completo." }
+    ],
+    "location": [[{ "param": "post_type", "operator": "==", "value": "banners" }]],
+    "position": "acf_after_title",
+    "style": "default",
+    "label_placement": "top",
+    "active": true,
+    "show_in_rest": 1
+  }
+]

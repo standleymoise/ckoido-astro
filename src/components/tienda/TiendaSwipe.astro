@@ -6,6 +6,8 @@
 // (con el encabezado Cart-Token), así que el visitante nunca sale del sitio.
 // Entre los productos van tarjetas de «Opiniones» (testimonios de WordPress: CPT UI + ACF): se
 // deslizan en cualquier dirección para pasar a la siguiente, sin tocar carrito ni favoritos.
+// Los «Banners» (CPT UI + ACF) también son tarjetas del mazo: se deslizan para pasar y, con un toque
+// (o ↓ / el botón «i»), abren su enlace. Las fechas de inicio y fin se respetan en el navegador.
 import { Image } from 'astro:assets';
 import type { CollectionEntry } from 'astro:content';
 import Logo from '../Logo.astro';
@@ -16,13 +18,20 @@ import { storeApiUrl } from '../../data/tienda';
 interface Props {
   productos: Producto[];
   testimonios?: CollectionEntry<'testimonios'>[];
+  banners?: CollectionEntry<'banners'>[];
 }
-const { productos, testimonios = [] } = Astro.props;
+const { productos, testimonios = [], banners = [] } = Astro.props;
 
 // Una opinión cada CADA productos (las que sobran van al final del mazo).
 const CADA = 3;
 // Lista plana para el template: cada elemento es un producto (p, i) o una opinión (t).
-type Elemento = { tipo: 'producto' | 'opinion'; p: Producto; i: number; t: CollectionEntry<'testimonios'> };
+type Elemento = {
+  tipo: 'producto' | 'opinion' | 'banner';
+  p: Producto;
+  i: number;
+  t: CollectionEntry<'testimonios'>;
+  b: CollectionEntry<'banners'>;
+};
 const elementos: Elemento[] = [];
 let siguienteOpinion = 0;
 productos.forEach((p, i) => {
@@ -34,6 +43,30 @@ productos.forEach((p, i) => {
 for (; siguienteOpinion < testimonios.length; siguienteOpinion++) {
   elementos.push({ tipo: 'opinion', t: testimonios[siguienteOpinion] } as Elemento);
 }
+
+// Banners: cada uno va después de «posicion» productos (0 = primera tarjeta). Los vencidos al compilar
+// no se publican; los que vencen después los quita el navegador (data-fin).
+const hoy = Number(
+  new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Costa_Rica' }).format(new Date()).replaceAll('-', ''),
+);
+const vigentes = banners
+  .filter((b) => !b.data.fin || Number(b.data.fin) >= hoy)
+  .sort((a, b) => a.data.posicion - b.data.posicion || a.data.orden - b.data.orden);
+for (const b of [...vigentes].reverse()) {
+  // Índice justo después del producto número «posicion» (o al final si hay menos productos).
+  let vistos = 0;
+  let indice = b.data.posicion === 0 ? 0 : elementos.length;
+  if (b.data.posicion > 0) {
+    for (let k = 0; k < elementos.length; k++) {
+      if (elementos[k].tipo === 'producto' && ++vistos === b.data.posicion) {
+        indice = k + 1;
+        break;
+      }
+    }
+  }
+  elementos.splice(indice, 0, { tipo: 'banner', b } as Elemento);
+}
+const esExterno = (url = '') => /^(https?:)?\/\//.test(url) && !url.includes('taxlockedwallet.com');
 const parrafos = (texto: string) => texto.split(/\n{2,}/).map((x) => x.trim()).filter(Boolean);
 
 const provincias = [
@@ -70,7 +103,43 @@ const provincias = [
   </header>
 
   <div class="mazo" data-mazo>
-    {elementos.map(({ tipo, p, i, t }) => tipo === 'opinion' ? (
+    {elementos.map(({ tipo, p, i, t, b }) => tipo === 'banner' ? (
+      <article
+        class:list={['tarjeta', 'banner', { 'solo-imagen': b.data.soloImagen }]}
+        data-tipo="banner"
+        data-nombre={b.data.titulo}
+        data-enlace={b.data.enlace}
+        data-externo={esExterno(b.data.enlace) ? '1' : undefined}
+        data-inicio={b.data.inicio}
+        data-fin={b.data.fin}
+        aria-roledescription="tarjeta de promoción"
+        aria-label={b.data.titulo}
+      >
+        <Image
+          class="banner-imagen"
+          src={b.data.imagen.url}
+          alt={b.data.soloImagen ? b.data.imagen.alt || b.data.titulo : ''}
+          inferSize
+          format="webp"
+          widths={[480, 720, 960]}
+          sizes="(max-width: 480px) 92vw, 440px"
+          loading={b.data.posicion === 0 ? 'eager' : 'lazy'}
+          draggable="false"
+        />
+        <span class="badge-opiniones badge-banner">{b.data.etiqueta}</span>
+        <span class="sello sello-carrito" aria-hidden="true">Al carrito</span>
+        <span class="sello sello-pasar" aria-hidden="true">Paso</span>
+        <span class="sello sello-favorito" aria-hidden="true">Favorito</span>
+        {!b.data.soloImagen && (
+          <div class="banner-texto">
+            <h2>{b.data.titulo}</h2>
+            {b.data.texto && <p>{b.data.texto}</p>}
+            {b.data.enlace && <span class="banner-boton">{b.data.boton}</span>}
+          </div>
+        )}
+        {b.data.soloImagen && b.data.enlace && <span class="banner-boton banner-boton-solo">{b.data.boton}</span>}
+      </article>
+    ) : tipo === 'opinion' ? (
       <article
         class="tarjeta opinion"
         data-tipo="opinion"
@@ -370,6 +439,15 @@ const provincias = [
     }
 
     // ---------- mazo ----------
+    // Banners fuera de fecha (inicio/fin en formato AAAAMMDD, hora de Costa Rica): se quitan aquí,
+    // así una promoción vence a tiempo aunque el sitio no se haya vuelto a compilar.
+    const hoy = Number(
+      new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Costa_Rica' }).format(new Date()).replaceAll('-', ''),
+    );
+    mazo.querySelectorAll<HTMLElement>('.tarjeta.banner').forEach((b) => {
+      const { inicio, fin } = b.dataset;
+      if ((inicio && Number(inicio) > hoy) || (fin && Number(fin) < hoy)) b.remove();
+    });
     const tarjetas = [...mazo.querySelectorAll<HTMLElement>('.tarjeta')];
     // #sku en la URL (p. ej. desde «Comprar ahora» de una ficha) pone ese producto primero.
     const pedido = decodeURIComponent(location.hash.slice(1));
@@ -454,9 +532,9 @@ const provincias = [
 
       // Quitar los que ya no están publicados; la tarjeta que se está viendo sigue arriba.
       const enPantalla = actual();
-      // Las tarjetas de opinión no son productos: se quedan.
+      // Las tarjetas de opinión y los banners no son productos: se quedan.
       for (const t of [...tarjetas]) {
-        if (t.dataset.tipo === 'opinion' || vivos.has(Number(t.dataset.id))) continue;
+        if (t.dataset.tipo || vivos.has(Number(t.dataset.id))) continue;
         const i = orden.indexOf(t);
         if (i > -1) orden.splice(i, 1);
         tarjetas.splice(tarjetas.indexOf(t), 1);
@@ -526,8 +604,8 @@ const provincias = [
     async function decidir(accion: Accion) {
       const t = actual();
       if (!t || ocupado) return;
-      // Opinión: sale volando hacia donde se deslizó y aparece la siguiente; nada más.
-      if (t.dataset.tipo === 'opinion') {
+      // Opinión o banner: sale volando hacia donde se deslizó y aparece la siguiente; nada más.
+      if (t.dataset.tipo) {
         ocupado = true;
         await volar(t, accion);
         recordar({ tarjeta: t, accion: 'pasar' });
@@ -653,6 +731,14 @@ const provincias = [
     function abrirDetalle() {
       const t = actual();
       if (!t) return;
+      // Banner: un toque (o ↓, o «i») abre su enlace. Los de otros sitios, en otra pestaña.
+      if (t.dataset.tipo === 'banner') {
+        const enlace = t.dataset.enlace;
+        if (!enlace) return;
+        if (t.dataset.externo) window.open(enlace, '_blank', 'noopener');
+        else location.href = enlace;
+        return;
+      }
       const plantilla = t.querySelector<HTMLTemplateElement>('template[data-detalle]')!;
       const cuerpo = dlgDetalle.querySelector<HTMLElement>('[data-detalle-cuerpo]')!;
       cuerpo.replaceChildren(plantilla.content.cloneNode(true));
@@ -1787,6 +1873,68 @@ const provincias = [
   }
   .opinion .sello {
     display: none;
+  }
+
+  /* ---------- tarjetas de banner (WordPress: CPT «banners» + ACF) ---------- */
+  .banner {
+    justify-content: flex-end;
+    background: var(--azul-900);
+    cursor: pointer;
+  }
+  .banner .sello {
+    display: none;
+  }
+  .banner :global(.banner-imagen) {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    pointer-events: none;
+  }
+  .badge-banner {
+    background: var(--rojo);
+  }
+  .banner-texto {
+    position: relative;
+    display: grid;
+    gap: 8px;
+    justify-items: start;
+    padding: 72px 22px 22px;
+    background: linear-gradient(to top, rgba(6, 34, 72, 0.92), rgba(6, 34, 72, 0.55) 60%, transparent);
+    color: #fff;
+  }
+  .banner-texto h2 {
+    margin: 0;
+    font-family: var(--font-alt);
+    font-size: clamp(22px, 6vw, 28px);
+    line-height: 1.15;
+    text-wrap: balance;
+  }
+  .banner-texto p {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.4;
+    opacity: 0.92;
+  }
+  .banner-boton {
+    display: inline-flex;
+    align-items: center;
+    margin-top: 6px;
+    padding: 10px 18px;
+    border-radius: 999px;
+    background: #fff;
+    color: var(--azul-900);
+    font-weight: 700;
+    font-size: 15px;
+  }
+  .banner-boton-solo {
+    position: absolute;
+    left: 50%;
+    bottom: 20px;
+    transform: translateX(-50%);
+    margin: 0;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
   }
   .opinion-cuerpo {
     display: flex;

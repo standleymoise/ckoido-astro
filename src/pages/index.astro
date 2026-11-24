@@ -23,6 +23,8 @@ const productos = await getProductos();
 const posts = tiendaActiva ? [] : (await getPosts()).slice(0, 4);
 // Opiniones de clientes (WordPress: CPT UI «testimonios» + ACF): van mezcladas en el mazo.
 const testimonios = tiendaActiva ? await getCollection('testimonios') : [];
+// Banners (WordPress: CPT UI «banners» + ACF): tarjetas de promoción dentro del mazo.
+const banners = tiendaActiva ? await getCollection('banners') : [];
 
 const sitio = new URL(import.meta.env.BASE_URL, Astro.site ?? Astro.url).href;
 const jsonLd = {
@@ -46,7 +48,7 @@ const jsonLd = {
   jsonLd={jsonLd}
 >
   {tiendaActiva ? (
-    <TiendaSwipe productos={productos} testimonios={testimonios} />
+    <TiendaSwipe productos={productos} testimonios={testimonios} banners={banners} />
   ) : (
   <>
   <Header />
