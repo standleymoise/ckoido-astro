@@ -452,16 +452,19 @@ const provincias = [
       const porId = new Map(tarjetas.map((t) => [Number(t.dataset.id), t]));
       const vivos = new Set(lista.map((p) => p.id));
 
-      // Quitar los que ya no están publicados (ajustando la posición del mazo).
+      // Quitar los que ya no están publicados; la tarjeta que se está viendo sigue arriba.
+      const enPantalla = actual();
       // Las tarjetas de opinión no son productos: se quedan.
       for (const t of [...tarjetas]) {
         if (t.dataset.tipo === 'opinion' || vivos.has(Number(t.dataset.id))) continue;
         const i = orden.indexOf(t);
-        if (i > -1 && i < pos) pos--;
         if (i > -1) orden.splice(i, 1);
         tarjetas.splice(tarjetas.indexOf(t), 1);
         historial = historial.filter((h) => h.tarjeta !== t);
         t.remove();
+      }
+      if (orden.length) {
+        pos = enPantalla && orden.includes(enPantalla) ? orden.indexOf(enPantalla) : pos % orden.length;
       }
       // Actualizar los que existen y agregar los nuevos al final del mazo.
       for (const p of lista) {
@@ -479,11 +482,16 @@ const provincias = [
 
     const actual = () => orden[pos] as HTMLElement | undefined;
 
+    // El mazo es infinito: la posición da la vuelta (después de la última viene la primera),
+    // así que nunca se llega a «ya vio todos».
+    const n = () => orden.length;
+    const avanzar = () => (pos = n() ? (pos + 1) % n() : 0);
+
     function pintarMazo() {
       orden.forEach((t, i) => {
-        const capa = i - pos;
+        const capa = (i - pos + n()) % n();
         t.classList.remove('arriba', 'siguiente', 'tercera');
-        t.hidden = capa < 0 || capa > 2;
+        t.hidden = capa > 2;
         t.style.transition = '';
         t.style.transform = '';
         t.setAttribute('aria-hidden', capa === 0 ? 'false' : 'true');
@@ -493,7 +501,7 @@ const provincias = [
         t.querySelectorAll<HTMLElement>('.sello').forEach((s) => (s.style.opacity = ''));
         t.classList.toggle('es-favorito', favoritos.has(t.dataset.sku!));
       });
-      fin.hidden = pos < orden.length;
+      fin.hidden = n() > 0;
     }
 
     function volar(t: HTMLElement, accion: Accion) {
@@ -511,6 +519,10 @@ const provincias = [
     }
 
     let ocupado = false;
+    const recordar = (h: { tarjeta: HTMLElement; accion: Accion }) => {
+      historial.push(h);
+      if (historial.length > 50) historial.shift();
+    };
     async function decidir(accion: Accion) {
       const t = actual();
       if (!t || ocupado) return;
@@ -518,8 +530,8 @@ const provincias = [
       if (t.dataset.tipo === 'opinion') {
         ocupado = true;
         await volar(t, accion);
-        historial.push({ tarjeta: t, accion: 'pasar' });
-        pos++;
+        recordar({ tarjeta: t, accion: 'pasar' });
+        avanzar();
         pintarMazo();
         ocupado = false;
         return;
@@ -531,8 +543,8 @@ const provincias = [
       }
       ocupado = true;
       await volar(t, accion);
-      historial.push({ tarjeta: t, accion });
-      pos++;
+      recordar({ tarjeta: t, accion });
+      avanzar();
       pintarMazo();
       ocupado = false;
 
@@ -553,7 +565,7 @@ const provincias = [
     async function deshacer() {
       const ultimo = historial.pop();
       if (!ultimo || ocupado) return;
-      pos--;
+      pos = Math.max(0, orden.indexOf(ultimo.tarjeta));
       pintarMazo();
       const { tarjeta, accion } = ultimo;
       if (accion === 'favorito') {
