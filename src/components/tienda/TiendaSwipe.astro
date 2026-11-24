@@ -1719,9 +1719,8 @@ const provincias = [
       min-height: 46px;
       gap: 6px;
     }
-    /* Logo.astro calcula su escala con calc(px / número), que da una medida y no un número: el
-       navegador la ignora y el logo siempre sale a 173 px. Aquí se fija la escala directamente
-       (solo en el swipe, para no cambiar el resto de páginas). */
+    /* Logo más chico en el celular para que no choque con favoritos y carrito
+       (--u es la escala de Logo.astro: 1 = 184 px). */
     .cabecera :global(.logo) {
       --u: 0.6 !important;
     }

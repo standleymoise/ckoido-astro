@@ -8,16 +8,18 @@ interface Props {
 }
 const { size = 184, href = url('/') } = Astro.props;
 ---
-<a class="logo" href={href} style={`--logo-w:${size}px`} aria-label="CK Oído, inicio">
+<a class="logo" href={href} style={`--u:${+(size / 184).toFixed(4)}`} aria-label="CK Oído, inicio">
   <img src={url("/img/logo-ck.svg")} alt="" class="ck" width="66" height="36" />
   <img src={url("/img/logo-gota.svg")} alt="" class="gota" width="39" height="59" />
   <img src={url("/img/logo-ido.svg")} alt="" class="ido" width="68" height="38" />
 </a>
 
 <style>
-  /* Proporciones medidas en el Figma sobre un logo de 184px de ancho */
+  /* Proporciones medidas en el Figma sobre un logo de 184px de ancho.
+     --u (escala) llega como número desde el atributo style: en CSS, calc(232px / 184) da una
+     medida y no un número, y calc(66px * <medida>) es inválido (el logo quedaba siempre igual). */
   .logo {
-    --u: calc(var(--logo-w) / 184);
+    --u: 1;
     display: inline-flex;
     align-items: flex-end;
     text-decoration: none;
