@@ -105,7 +105,7 @@ const banners = defineCollection({
     orden: z.number(),
     imagen: z
       .object({ url: z.string().url(), alt: z.string().default('') }, {
-        required_error: 'El banner no tiene imagen (campo ACF «imagen»).',
+        error: 'El banner no tiene imagen (campo ACF «imagen»).',
       })
       .passthrough(),
     etiqueta: z.string(),
