@@ -26,6 +26,9 @@ export type Carrito = {
 export type ProductoApi = {
   id: number;
   sku: string;
+  slug?: string;
+  categories?: { slug: string; name: string }[];
+  tags?: { slug: string; name: string }[];
   name: string;
   short_description: string;
   description: string;

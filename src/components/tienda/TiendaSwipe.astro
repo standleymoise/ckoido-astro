@@ -7,13 +7,16 @@
 // Entre los productos van tarjetas de «Opiniones» (testimonios de WordPress: CPT UI + ACF): se
 // deslizan en cualquier dirección para pasar a la siguiente, sin tocar carrito ni favoritos.
 // Los «Banners» (CPT UI + ACF) también son tarjetas del mazo: se deslizan para pasar y, con un toque
-// (o ↓ / el botón «i»), abren su enlace. Las fechas de inicio y fin se respetan en el navegador.
+// (o ↓ / el botón «i»), abren su destino SIN salir del swipe: una categoría o etiqueta deja el mazo
+// solo con esos productos, un producto salta a ese producto y una página de WordPress se lee en la
+// hoja de detalle. Solo los enlaces a otros sitios (WhatsApp, redes) salen. Las fechas de inicio y
+// fin se respetan en el navegador.
 import { Image } from 'astro:assets';
 import type { CollectionEntry } from 'astro:content';
 import Logo from '../Logo.astro';
 import { rutas } from '../../data/sitio';
 import type { Producto } from '../../data/tienda';
-import { storeApiUrl } from '../../data/tienda';
+import { storeApiUrl, tiendaUrl } from '../../data/tienda';
 
 interface Props {
   productos: Producto[];
@@ -66,7 +69,88 @@ for (const b of [...vigentes].reverse()) {
   }
   elementos.splice(indice, 0, { tipo: 'banner', b } as Elemento);
 }
-const esExterno = (url = '') => /^(https?:)?\/\//.test(url) && !url.includes('taxlockedwallet.com');
+// Adónde lleva un banner. Se acepta lo que el dueño copia del navegador:
+//   categoría  …/categoria-producto/<slug>/  (o /product-category/, ?categoria=, ?product_cat=)
+//   etiqueta   …/etiqueta-producto/<slug>/   (o /product-tag/, ?etiqueta=, ?product_tag=)
+//   producto   …/producto/<slug>/            (o /product/, ?producto=)
+//   todos      /, /productos/, /tienda/ (la tienda de WooCommerce)
+//   página     cualquier otra dirección de WordPress → su texto se muestra en la hoja de detalle
+//   externo    otro sitio (WhatsApp, Instagram…) → se abre en otra pestaña
+//   sitio      otra página de este sitio (/nosotros/) → se abre normal
+type Destino =
+  | { tipo: 'categoria' | 'etiqueta' | 'producto'; slug: string }
+  | { tipo: 'todos' }
+  | { tipo: 'pagina'; slug: string; titulo?: string; parrafos?: string[] }
+  | { tipo: 'externo' | 'sitio'; url: string };
+const hostSitio = Astro.site?.host;
+const hostTienda = tiendaUrl ? new URL(tiendaUrl).host : '';
+const BASES: Record<string, 'categoria' | 'etiqueta' | 'producto'> = {
+  'categoria-producto': 'categoria',
+  'product-category': 'categoria',
+  'etiqueta-producto': 'etiqueta',
+  'product-tag': 'etiqueta',
+  producto: 'producto',
+  product: 'producto',
+};
+function destinoDe(enlace?: string): Destino | undefined {
+  if (!enlace) return undefined;
+  let u: URL;
+  try {
+    u = new URL(enlace, Astro.site ?? 'https://sitio.invalid');
+  } catch {
+    return undefined;
+  }
+  const esTienda = u.host === hostTienda;
+  if (!esTienda && u.host !== hostSitio && u.host !== 'sitio.invalid') return { tipo: 'externo', url: u.href };
+  const q = u.searchParams;
+  for (const [param, tipo] of [
+    ['categoria', 'categoria'], ['product_cat', 'categoria'],
+    ['etiqueta', 'etiqueta'], ['product_tag', 'etiqueta'],
+    ['producto', 'producto'],
+  ] as const) {
+    if (q.get(param)) return { tipo, slug: q.get(param)! };
+  }
+  const partes = u.pathname.split('/').filter(Boolean).map(decodeURIComponent);
+  const i = partes.findIndex((x) => x in BASES);
+  if (i > -1 && partes.length > i + 1) return { tipo: BASES[partes[i]], slug: partes[partes.length - 1] };
+  // Ruta relativa a la carpeta de WordPress (p. ej. /tienda/… en un solo dominio).
+  const base = tiendaUrl ? new URL(tiendaUrl).pathname.replace(/\/+$/, '') : '';
+  const resto = esTienda && base && u.pathname.startsWith(base) ? u.pathname.slice(base.length) : u.pathname;
+  const limpio = resto.replace(/^\/+|\/+$/g, '');
+  if (!limpio || ['productos', 'tienda', 'shop'].includes(limpio)) return { tipo: 'todos' };
+  if (esTienda) return { tipo: 'pagina', slug: limpio.split('/').pop()! };
+  return { tipo: 'sitio', url: u.pathname + u.search + u.hash };
+}
+
+// Páginas de WordPress enlazadas desde un banner: se leen al compilar (título y párrafos de texto).
+const textoPlano = (html: string) =>
+  html
+    .replace(/<(script|style)[\s\S]*?<\/\1>/gi, '')
+    .split(/<\/(?:p|h[1-6]|li|div)>|<br\s*\/?>/i)
+    .map((x) => x.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&#8217;/g, '’').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim())
+    .filter(Boolean);
+const destinos = new Map<string, Destino | undefined>();
+for (const b of vigentes) {
+  const d = destinoDe(b.data.enlace);
+  if (d?.tipo === 'pagina' && tiendaUrl) {
+    const r = await fetch(`${tiendaUrl}/wp-json/wp/v2/pages?slug=${encodeURIComponent(d.slug)}&_fields=title,content`);
+    const [pagina] = r.ok ? ((await r.json()) as { title: { rendered: string }; content: { rendered: string } }[]) : [];
+    if (pagina) {
+      d.titulo = textoPlano(pagina.title.rendered).join(' ');
+      d.parrafos = textoPlano(pagina.content.rendered);
+    } else console.warn(`[banners] «${b.data.titulo}»: no encontré la página «${d.slug}» en WordPress.`);
+  }
+  destinos.set(b.id, d);
+}
+const filtroDe = (d?: Destino) =>
+  d && (d.tipo === 'categoria' || d.tipo === 'etiqueta' || d.tipo === 'producto') ? `${d.tipo}:${d.slug}` : d?.tipo === 'todos' ? 'todos' : undefined;
+
+// Nombres para el aviso «Mostrando: …» del filtro.
+const nombresFiltro: Record<string, string> = {};
+for (const p of productos) {
+  p.categorias.forEach((c) => (nombresFiltro[`categoria:${c.slug}`] = c.nombre));
+  p.etiquetas.forEach((c) => (nombresFiltro[`etiqueta:${c.slug}`] = c.nombre));
+}
 const parrafos = (texto: string) => texto.split(/\n{2,}/).map((x) => x.trim()).filter(Boolean);
 
 const provincias = [
@@ -79,7 +163,7 @@ const provincias = [
   ['CR-L', 'Limón'],
 ];
 ---
-<main class="tienda" data-api={storeApiUrl} aria-labelledby="tienda-titulo">
+<main class="tienda" data-api={storeApiUrl} data-nombres-filtro={JSON.stringify(nombresFiltro)} aria-labelledby="tienda-titulo">
   <header class="cabecera">
     <a class="btn-carrito btn-cuenta" href={rutas.cuenta} data-cuenta>
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="4" /><path d="M4.5 20a7.5 7.5 0 0 1 15 0" /></svg>
@@ -108,8 +192,10 @@ const provincias = [
         class:list={['tarjeta', 'banner', { 'solo-imagen': b.data.soloImagen }]}
         data-tipo="banner"
         data-nombre={b.data.titulo}
-        data-enlace={b.data.enlace}
-        data-externo={esExterno(b.data.enlace) ? '1' : undefined}
+        data-filtro={filtroDe(destinos.get(b.id))}
+        data-enlace={(() => { const d = destinos.get(b.id); return d?.tipo === 'externo' || d?.tipo === 'sitio' ? d.url : undefined; })()}
+        data-externo={destinos.get(b.id)?.tipo === 'externo' ? '1' : undefined}
+        data-pagina={destinos.get(b.id)?.tipo === 'pagina' ? '1' : undefined}
         data-inicio={b.data.inicio}
         data-fin={b.data.fin}
         aria-roledescription="tarjeta de promoción"
@@ -138,6 +224,16 @@ const provincias = [
           </div>
         )}
         {b.data.soloImagen && b.data.enlace && <span class="banner-boton banner-boton-solo">{b.data.boton}</span>}
+        {(() => {
+          const d = destinos.get(b.id);
+          return d?.tipo === 'pagina' && d.parrafos ? (
+            <template data-detalle>
+              <p class="badge-opiniones badge-banner">{b.data.etiqueta}</p>
+              <h2>{d.titulo || b.data.titulo}</h2>
+              {d.parrafos.map((x) => <p>{x}</p>)}
+            </template>
+          ) : null;
+        })()}
       </article>
     ) : tipo === 'opinion' ? (
       <article
@@ -201,6 +297,9 @@ const provincias = [
         class="tarjeta"
         data-id={p.id}
         data-sku={p.sku}
+        data-slug={p.slug}
+        data-categorias={p.categorias.map((c) => c.slug).join(' ')}
+        data-etiquetas={p.etiquetas.map((c) => c.slug).join(' ')}
         data-nombre={p.nombre}
         data-stock={p.enStock ? '1' : '0'}
         aria-roledescription="tarjeta de producto"
@@ -269,6 +368,10 @@ const provincias = [
     </button>
   </div>
 
+  <p class="filtro-activo" data-filtro-activo hidden>
+    <span>Mostrando: <strong data-filtro-nombre></strong></span>
+    <button type="button" data-accion="quitar-filtro">Ver todos <span aria-hidden="true">✕</span></button>
+  </p>
   <p class="ayuda">
     <span aria-hidden="true">→</span> carrito · <span aria-hidden="true">←</span> pasar ·
     <span aria-hidden="true">↑</span> favorito · <span aria-hidden="true">↓</span> detalle
@@ -454,6 +557,8 @@ const provincias = [
     const orden = [...tarjetas].sort(
       (a, b) => Number(b.dataset.sku === pedido) - Number(a.dataset.sku === pedido),
     );
+    // Todas las tarjetas en su orden; «orden» es lo que se está mostrando (todas o las del filtro).
+    const todas = [...orden];
     let pos = 0;
     let historial: { tarjeta: HTMLElement; accion: Accion }[] = [];
     type Accion = 'carrito' | 'pasar' | 'favorito';
@@ -499,6 +604,11 @@ const provincias = [
       const stock = p.stock_availability?.text || (p.is_in_stock ? 'Disponible' : 'Agotado');
       t.dataset.id = String(p.id);
       t.dataset.sku = p.sku;
+      if (p.slug) t.dataset.slug = p.slug;
+      if (p.categories) t.dataset.categorias = p.categories.map((c) => c.slug).join(' ');
+      if (p.tags) t.dataset.etiquetas = p.tags.map((c) => c.slug).join(' ');
+      p.categories?.forEach((c) => (nombresFiltro[`categoria:${c.slug}`] ??= c.name));
+      p.tags?.forEach((c) => (nombresFiltro[`etiqueta:${c.slug}`] ??= c.name));
       t.dataset.nombre = p.name;
       t.dataset.stock = enStock ? '1' : '0';
       t.setAttribute('aria-label', `${p.name}, ${precio}`);
@@ -551,14 +661,75 @@ const provincias = [
           t = crearTarjeta(p);
           mazo.insertBefore(t, fin);
           tarjetas.push(t);
-          orden.push(t);
-        }
-        actualizarTarjeta(t, p);
+          todas.push(t);
+          actualizarTarjeta(t, p);
+          if (coincide(t, filtro)) orden.push(t);
+          else t.hidden = true;
+        } else actualizarTarjeta(t, p);
       }
       if (!ocupado && !inicio) pintarMazo();
     }
 
     const actual = () => orden[pos] as HTMLElement | undefined;
+
+    // ---------- filtro (categoría / etiqueta) ----------
+    // Un banner, o una dirección como /?categoria=gotas, deja el mazo solo con esos productos (sin
+    // opiniones ni banners). «Ver todos» vuelve al mazo completo. El botón «atrás» del celular también.
+    type Filtro = { tipo: 'categoria' | 'etiqueta'; slug: string } | null;
+    let filtro: Filtro = null;
+    const nombresFiltro: Record<string, string> = JSON.parse(raiz.dataset.nombresFiltro || '{}');
+    const avisoFiltro = raiz.querySelector<HTMLElement>('[data-filtro-activo]')!;
+    const ayuda = raiz.querySelector<HTMLElement>('.ayuda')!;
+    const lista = (t: HTMLElement, campo: 'categorias' | 'etiquetas') => (t.dataset[campo] || '').split(' ');
+    function coincide(t: HTMLElement, f: Filtro) {
+      if (!f) return true;
+      if (t.dataset.tipo) return false; // opiniones y banners: solo en el mazo completo
+      return lista(t, f.tipo === 'categoria' ? 'categorias' : 'etiquetas').includes(f.slug);
+    }
+    function aplicarFiltro(f: Filtro, historia: 'push' | 'replace' | 'no' = 'push') {
+      const nuevas = todas.filter((t) => coincide(t, f));
+      const nombre = f ? nombresFiltro[`${f.tipo}:${f.slug}`] || f.slug.replace(/-/g, ' ') : '';
+      if (f && !nuevas.length) {
+        avisar(`Por ahora no hay productos en «${nombre}».`);
+        return false;
+      }
+      filtro = f;
+      orden.splice(0, orden.length, ...nuevas);
+      todas.forEach((t) => {
+        if (!nuevas.includes(t)) {
+          t.hidden = true;
+          t.classList.remove('arriba', 'siguiente', 'tercera');
+        }
+      });
+      pos = 0;
+      historial = [];
+      avisoFiltro.hidden = !f;
+      ayuda.hidden = !!f;
+      avisoFiltro.querySelector('[data-filtro-nombre]')!.textContent = nombre;
+      if (historia !== 'no') {
+        const url = new URL(location.href);
+        ['categoria', 'etiqueta', 'producto'].forEach((k) => url.searchParams.delete(k));
+        if (f) url.searchParams.set(f.tipo, f.slug);
+        history[historia === 'push' ? 'pushState' : 'replaceState'](null, '', url);
+      }
+      pintarMazo();
+      return true;
+    }
+    /** Salta a un producto (por slug o SKU) en el mazo completo. */
+    function irAProducto(slug: string) {
+      if (filtro) aplicarFiltro(null, 'replace');
+      const t = orden.find((x) => !x.dataset.tipo && (x.dataset.slug === slug || x.dataset.sku === slug));
+      if (!t) return avisar('Ese producto ya no está disponible.');
+      pos = orden.indexOf(t);
+      pintarMazo();
+    }
+    function filtroDeUrl(): Filtro {
+      const q = new URLSearchParams(location.search);
+      if (q.get('categoria')) return { tipo: 'categoria', slug: q.get('categoria')! };
+      if (q.get('etiqueta')) return { tipo: 'etiqueta', slug: q.get('etiqueta')! };
+      return null;
+    }
+    addEventListener('popstate', () => aplicarFiltro(filtroDeUrl(), 'no'));
 
     // El mazo es infinito: la posición da la vuelta (después de la última viene la primera),
     // así que nunca se llega a «ya vio todos».
@@ -731,20 +902,34 @@ const provincias = [
     function abrirDetalle() {
       const t = actual();
       if (!t) return;
-      // Banner: un toque (o ↓, o «i») abre su enlace. Los de otros sitios, en otra pestaña.
+      // Banner: un toque (o ↓, o «i») abre su destino sin salir del swipe.
       if (t.dataset.tipo === 'banner') {
-        const enlace = t.dataset.enlace;
-        if (!enlace) return;
-        if (t.dataset.externo) window.open(enlace, '_blank', 'noopener');
-        else location.href = enlace;
-        return;
+        const { filtro: destino, enlace } = t.dataset;
+        if (destino === 'todos') {
+          if (filtro) aplicarFiltro(null);
+          else decidir('pasar');
+          return;
+        }
+        if (destino) {
+          const [tipo, slug] = destino.split(':') as ['categoria' | 'etiqueta' | 'producto', string];
+          if (tipo === 'producto') irAProducto(slug);
+          else aplicarFiltro({ tipo, slug });
+          return;
+        }
+        if (enlace) {
+          if (t.dataset.externo) window.open(enlace, '_blank', 'noopener');
+          else location.href = enlace;
+          return;
+        }
+        if (!t.dataset.pagina) return; // sin destino: el toque no hace nada
       }
       const plantilla = t.querySelector<HTMLTemplateElement>('template[data-detalle]')!;
       const cuerpo = dlgDetalle.querySelector<HTMLElement>('[data-detalle-cuerpo]')!;
       cuerpo.replaceChildren(plantilla.content.cloneNode(true));
       // En una opinión no hay «Favorito» ni «Agregar al carrito».
-      dlgDetalle.querySelector<HTMLElement>('.hoja-pie')!.hidden = t.dataset.tipo === 'opinion';
-      dlgDetalle.classList.toggle('es-opinion', t.dataset.tipo === 'opinion');
+      // En una opinión o una página de un banner no hay «Favorito» ni «Agregar al carrito».
+      dlgDetalle.querySelector<HTMLElement>('.hoja-pie')!.hidden = !!t.dataset.tipo;
+      dlgDetalle.classList.toggle('es-opinion', !!t.dataset.tipo);
       dlgDetalle.showModal();
     }
 
@@ -976,6 +1161,9 @@ const provincias = [
         case 'detalle':
           abrirDetalle();
           break;
+        case 'quitar-filtro':
+          aplicarFiltro(null);
+          break;
         case 'reiniciar':
           pos = 0;
           historial.length = 0;
@@ -1001,6 +1189,10 @@ const provincias = [
     );
 
     pintarMazo();
+    const filtroInicial = filtroDeUrl();
+    if (filtroInicial && !aplicarFiltro(filtroInicial, 'no')) aplicarFiltro(null, 'replace');
+    const productoInicial = new URLSearchParams(location.search).get('producto');
+    if (productoInicial) irAProducto(productoInicial);
     raiz.classList.add('lista');
     pintarContadorFavs();
     pintarCuenta();
@@ -1873,6 +2065,46 @@ const provincias = [
   }
   .opinion .sello {
     display: none;
+  }
+
+  /* ---------- aviso de filtro (ocupa el lugar de la línea de ayuda) ---------- */
+  .filtro-activo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 0;
+    min-width: 0;
+    font-size: 13px;
+    color: var(--azul-900);
+  }
+  .filtro-activo[hidden] {
+    display: none;
+  }
+  .filtro-activo > span {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .filtro-activo strong {
+    font-weight: 700;
+  }
+  .filtro-activo button {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 28px;
+    padding: 2px 10px;
+    white-space: nowrap;
+    border: 1px solid var(--borde);
+    border-radius: 999px;
+    background: #fff;
+    color: var(--azul-900);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
   }
 
   /* ---------- tarjetas de banner (WordPress: CPT «banners» + ACF) ---------- */

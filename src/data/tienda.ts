@@ -15,6 +15,10 @@ export const tiendaActiva = tiendaUrl !== '';
 export interface Producto {
   id: number;
   sku: string;
+  slug: string;
+  /** Categorías y etiquetas de WooCommerce: el swipe se puede filtrar por ellas (banners, ?categoria=). */
+  categorias: { slug: string; nombre: string }[];
+  etiquetas: { slug: string; nombre: string }[];
   nombre: string;
   resumen: string;
   /** Descripción larga, en párrafos de texto plano. */
@@ -37,6 +41,9 @@ export interface Producto {
 interface StoreApiProducto {
   id: number;
   sku: string;
+  slug: string;
+  categories?: { slug: string; name: string }[];
+  tags?: { slug: string; name: string }[];
   name: string;
   permalink: string;
   short_description: string;
@@ -73,6 +80,9 @@ const parrafos = (html: string) =>
 const aProducto = (p: StoreApiProducto): Producto => ({
   id: p.id,
   sku: p.sku,
+  slug: p.slug,
+  categorias: (p.categories ?? []).map((c) => ({ slug: c.slug, nombre: sinHtml(c.name) })),
+  etiquetas: (p.tags ?? []).map((c) => ({ slug: c.slug, nombre: sinHtml(c.name) })),
   nombre: p.name,
   resumen: sinHtml(p.short_description),
   descripcion: parrafos(p.description),
