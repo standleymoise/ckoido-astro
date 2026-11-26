@@ -7,7 +7,8 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone as clonarConEsqueleto } from 'three/examples/jsm/utils/SkeletonUtils.js';
-import { aparienciaDe, type Apariencia, type Personaje } from './personaje';
+import { aparienciaDe, decodificar, type Apariencia, type Personaje } from './personaje';
+import { MANUBRIO } from './carrito';
 
 export type Ropa = Partial<Pick<Apariencia, 'remera' | 'pantalon' | 'zapatos'>>;
 export type FabricaPersonas = (numero: number, ropa?: Ropa) => Personaje;
@@ -16,10 +17,50 @@ const REMERA = new Set(['spine_01', 'spine_02', 'spine_03', 'clavicle_l', 'clavi
 const PANTALON = new Set(['root', 'pelvis', 'thigh_l', 'thigh_r', 'calf_l', 'calf_r']);
 const ZAPATOS = new Set(['foot_l', 'foot_r', 'ball_l', 'ball_r', 'ball_leaf_l', 'ball_leaf_r']);
 
+// En el mismo orden que PEINADOS_NOMBRES (personaje.ts).
 const PEINADOS = {
-  hombre: ['simpleparted', 'buzzed', 'beard', 'simpleparted'],
-  mujer: ['long', 'buns', 'buzzedfemale', 'long'],
+  hombre: ['simpleparted', 'buzzed', 'beard'],
+  mujer: ['long', 'buns', 'buzzedfemale'],
 } as const;
+
+// ---------- brazos al manubrio (cinemática inversa de dos huesos) ----------
+// La animación de caminar mueve todo el cuerpo; después, en cada cuadro, hombro → codo → mano se
+// acomodan para que las manos queden sobre el manubrio del carrito, con el codo hacia abajo y afuera.
+const v1 = new THREE.Vector3();
+const v2 = new THREE.Vector3();
+const v3 = new THREE.Vector3();
+const q1 = new THREE.Quaternion();
+const q2 = new THREE.Quaternion();
+function girarHueso(hueso: THREE.Object3D, desde: THREE.Vector3, hacia: THREE.Vector3) {
+  if (desde.lengthSq() < 1e-8 || hacia.lengthSq() < 1e-8) return;
+  const delta = q1.setFromUnitVectors(desde.normalize(), hacia.normalize());
+  hueso.getWorldQuaternion(q2);
+  const mundo = delta.multiply(q2);
+  hueso.parent!.getWorldQuaternion(q2);
+  hueso.quaternion.copy(q2.invert().multiply(mundo));
+  hueso.updateMatrixWorld(true);
+}
+function alcanzar(hombro: THREE.Object3D, codo: THREE.Object3D, mano: THREE.Object3D, meta: THREE.Vector3, polo: THREE.Vector3) {
+  const a = hombro.getWorldPosition(new THREE.Vector3());
+  const b = codo.getWorldPosition(new THREE.Vector3());
+  const c = mano.getWorldPosition(new THREE.Vector3());
+  const l1 = a.distanceTo(b);
+  const l2 = b.distanceTo(c);
+  const haciaMeta = v1.copy(meta).sub(a);
+  const d = Math.min(Math.max(haciaMeta.length(), 0.05), l1 + l2 - 0.002);
+  haciaMeta.normalize();
+  // Ángulo en el hombro (ley de cosenos) y plano que contiene al polo (hacia dónde se dobla el codo).
+  const angulo = Math.acos(Math.min(1, Math.max(-1, (l1 * l1 + d * d - l2 * l2) / (2 * l1 * d))));
+  const eje = v2.crossVectors(haciaMeta, polo);
+  if (eje.lengthSq() < 1e-6) eje.set(1, 0, 0);
+  eje.normalize();
+  let codoDeseado = v3.copy(haciaMeta).applyAxisAngle(eje, angulo);
+  if (codoDeseado.dot(polo) < 0) codoDeseado = v3.copy(haciaMeta).applyAxisAngle(eje, -angulo);
+  girarHueso(hombro, b.clone().sub(a), codoDeseado.clone());
+  const b2 = codo.getWorldPosition(new THREE.Vector3());
+  const c2 = mano.getWorldPosition(new THREE.Vector3());
+  girarHueso(codo, c2.sub(b2), meta.clone().sub(b2));
+}
 
 type Plantilla = { escena: THREE.Object3D; pieles: THREE.Texture[] };
 
@@ -128,7 +169,8 @@ export async function cargarPersonas(base: string): Promise<FabricaPersonas> {
 
   return (numero, ropaPedida = {}) => {
     const ap = aparienciaDe(numero);
-    const genero: 'hombre' | 'mujer' = numero % 2 ? 'mujer' : 'hombre';
+    const eleccion = decodificar(numero);
+    const genero: 'hombre' | 'mujer' = eleccion.mujer ? 'mujer' : 'hombre';
     const plantilla = plantillas[genero];
     const modelo = clonarConEsqueleto(plantilla.escena);
     const ropa = {
@@ -136,7 +178,7 @@ export async function cargarPersonas(base: string): Promise<FabricaPersonas> {
       pantalon: ropaPedida.pantalon ?? ap.pantalon,
       zapatos: ropaPedida.zapatos ?? ap.zapatos,
     };
-    const tonoOscuro = ['#b97d57', '#8d5a3b', '#5e3a26'].includes(ap.piel);
+    const tonoOscuro = eleccion.oscura;
     let cuerpo: THREE.SkinnedMesh | null = null;
     modelo.traverse((o) => {
       const s = o as THREE.SkinnedMesh;
@@ -147,7 +189,7 @@ export async function cargarPersonas(base: string): Promise<FabricaPersonas> {
     });
     // Peinado: la malla del pelo se ata al esqueleto de esta persona (mismos nombres de huesos).
     const peinados = PEINADOS[genero];
-    const pelo = pelos.get(peinados[ap.peinado % peinados.length]);
+    const pelo = pelos.get(peinados[eleccion.peinado % peinados.length]);
     if (pelo && cuerpo) {
       const c = cuerpo as THREE.SkinnedMesh;
       const copia = new THREE.SkinnedMesh(pelo.geometry, (pelo.material as THREE.Material).clone());
@@ -172,7 +214,6 @@ export async function cargarPersonas(base: string): Promise<FabricaPersonas> {
     };
     const quieto = accion('Idle_Loop');
     const caminar = accion('Walk_Loop');
-    const empujarA = accion('Push_Loop');
     const tomar = accion('PickUp_Table');
     if (tomar) {
       tomar.setLoop(THREE.LoopOnce, 1);
@@ -188,6 +229,16 @@ export async function cargarPersonas(base: string): Promise<FabricaPersonas> {
     };
     let conCarrito = false;
     let sosteniendo = false;
+    const hueso = (n: string) => modelo.getObjectByName(n);
+    const brazo = (l: 'l' | 'r') => {
+      const hombro = hueso(`upperarm_${l}`);
+      const codo = hueso(`lowerarm_${l}`);
+      const mano = hueso(`hand_${l}`);
+      return hombro && codo && mano ? { hombro, codo, mano } : null;
+    };
+    const izq = brazo('l');
+    const der = brazo('r');
+    const brazos = izq && der ? { izq, der } : null;
 
     const p: Personaje = {
       grupo,
@@ -197,13 +248,22 @@ export async function cargarPersonas(base: string): Promise<FabricaPersonas> {
         const rapidez = Math.abs(velocidad);
         if (sosteniendo) cambiarA(tomar);
         else if (rapidez > 0.15) {
-          const a = conCarrito && empujarA ? empujarA : caminar;
-          cambiarA(a);
+          // Camina normal (también con el carrito: las manos se acomodan solas en el manubrio).
+          cambiarA(caminar);
           // La animación va al ritmo del paso; hacia atrás, al revés (no se da vuelta).
-          if (a) a.timeScale = Math.sign(velocidad) * Math.min(1.8, rapidez / (a === empujarA ? 1.1 : 1.35));
+          if (caminar) caminar.timeScale = Math.sign(velocidad) * Math.min(1.8, rapidez / 1.35);
         } else cambiarA(quieto);
         mezclador.update(dt);
         grupo.rotation.y = p.rumbo;
+        if (conCarrito && !sosteniendo && brazos) {
+          grupo.updateMatrixWorld(true);
+          // Manos en el manubrio (adelante del comprador; su izquierda es −x mirando hacia −z).
+          for (const [b, x] of [[brazos.izq, -1], [brazos.der, 1]] as const) {
+            const meta = grupo.localToWorld(new THREE.Vector3(x * 0.2, MANUBRIO.y, MANUBRIO.z));
+            const polo = grupo.localToWorld(new THREE.Vector3(x * 0.6, 0.6, 0.2)).sub(grupo.localToWorld(new THREE.Vector3(0, 1.3, -0.2)));
+            alcanzar(b.hombro, b.codo, b.mano, meta, polo.normalize());
+          }
+        }
       },
       empujar(si) {
         conCarrito = si;

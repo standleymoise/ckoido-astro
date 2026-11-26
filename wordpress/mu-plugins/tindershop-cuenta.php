@@ -10,6 +10,9 @@
  *   GET  cuenta                                             → { perfil, pedidos }   (requiere token)
  *   POST cuenta     { nombre, apellidos, telefono, ... }    → { perfil }            (requiere token)
  *   POST salir                                              → cierra esta sesión     (requiere token)
+ *   POST personaje  { codigo }                              → { perfil }            (requiere token)
+ *        El personaje de la tienda 3D (un número: género, piel, peinado y ropa), para que sea el mismo
+ *        en cualquier dispositivo.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -119,6 +122,7 @@ function tindershop_perfil( $user_id ) {
 		'ciudad'    => $cliente->get_billing_city(),
 		'provincia' => $cliente->get_billing_state(),
 		'postal'    => $cliente->get_billing_postcode(),
+		'personaje' => (int) get_user_meta( $user_id, 'tindershop_personaje', true ),
 	);
 }
 
@@ -307,6 +311,23 @@ add_action(
 						return array( 'perfil' => tindershop_perfil( $id ) );
 					},
 				),
+			)
+		);
+
+		register_rest_route(
+			$ns,
+			'/personaje',
+			array(
+				'methods'             => 'POST',
+				'permission_callback' => 'is_user_logged_in',
+				'callback'            => function ( WP_REST_Request $req ) {
+					$codigo = (int) $req->get_param( 'codigo' );
+					if ( $codigo < 1 || $codigo > 9999 ) {
+						return new WP_Error( 'tindershop_personaje', 'Personaje inválido.', array( 'status' => 400 ) );
+					}
+					update_user_meta( get_current_user_id(), 'tindershop_personaje', $codigo );
+					return array( 'perfil' => tindershop_perfil( get_current_user_id() ) );
+				},
 			)
 		);
 

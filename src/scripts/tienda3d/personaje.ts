@@ -37,13 +37,17 @@ export type Personaje = {
 export const ALTURA_OJOS = 1.68;
 
 const PIELES = ['#f6d5b8', '#ecbf9a', '#d9a27c', '#b97d57', '#8d5a3b', '#5e3a26'];
+
+import { decodificar, COLORES_REMERA, COLORES_PANTALON } from './codigo';
+export { decodificar, codificar, COLORES_REMERA, COLORES_PANTALON, PEINADOS_NOMBRES, CODIGOS, codigoAlAzar, type Eleccion } from './codigo';
 const PELOS = ['#2b1d14', '#4a3020', '#7a5233', '#b88a4e', '#1a1a1a', '#8a8a8a'];
 const REMERAS = ['#ed2853', '#0474ba', '#2f9e6a', '#f2b632', '#6b4fbb', '#ffffff', '#24303f', '#e8692c'];
 const PANTALONES = ['#0a4383', '#2b3442', '#5a4636', '#3d5a80', '#1d1d1f', '#7a7f87'];
 const ZAPATOS = ['#ffffff', '#1d1d1f', '#6b4a2f', '#c0392b'];
 
-/** Aspecto estable a partir de un número (el mismo número = la misma persona). */
+/** Aspecto a partir del código del personaje (el mismo código = la misma persona). */
 export function aparienciaDe(n: number): Apariencia {
+  const e = decodificar(n);
   let s = (Math.abs(Math.floor(n)) * 2654435761) >>> 0;
   const al = () => {
     s = (s * 1664525 + 1013904223) >>> 0;
@@ -51,12 +55,12 @@ export function aparienciaDe(n: number): Apariencia {
   };
   const de = <T,>(l: T[]) => l[Math.floor(al() * l.length)];
   return {
-    piel: de(PIELES),
+    piel: e.oscura ? PIELES[4] : de(PIELES.slice(0, 3)),
     pelo: de(PELOS),
-    remera: de(REMERAS),
-    pantalon: de(PANTALONES),
+    remera: COLORES_REMERA[e.remera],
+    pantalon: COLORES_PANTALON[e.pantalon],
     zapatos: de(ZAPATOS),
-    peinado: Math.floor(al() * 4),
+    peinado: e.mujer ? [1, 2, 3][e.peinado] : [0, 3, 0][e.peinado],
     hombros: 0.9 + al() * 0.2,
     altura: 0.94 + al() * 0.12,
   };

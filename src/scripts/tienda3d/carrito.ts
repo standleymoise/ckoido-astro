@@ -5,6 +5,9 @@ import * as THREE from 'three';
 
 export type ItemCarrito = { id: number; cantidad: number };
 
+/** Dónde está el manubrio, respecto del comprador (adelante = −z): ahí van las manos. */
+export const MANUBRIO = { y: 0.55 + 0.4 + 0.2, z: -0.98 + 0.75 / 2 + 0.13 };
+
 export type Carrito3D = {
   grupo: THREE.Group;
   /** Distancia desde el comprador hasta el centro de la canasta (metros, hacia adelante). */

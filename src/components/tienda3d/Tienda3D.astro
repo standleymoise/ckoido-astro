@@ -112,6 +112,40 @@ const datos = await Promise.all(
     <div class="inicio-caja">
       <h2 id="inicio-titulo">Bienvenido a la tienda</h2>
       <p>Recorra los pasillos, acérquese a lo que le guste y agréguelo al carrito.</p>
+      <div class="personaje" data-personaje>
+        <p class="inicio-pregunta">Su personaje</p>
+        <div class="personaje-fila">
+          <span>Persona</span>
+          <div class="chips" data-grupo="mujer">
+            <button type="button" data-valor="0">Hombre</button>
+            <button type="button" data-valor="1">Mujer</button>
+          </div>
+        </div>
+        <div class="personaje-fila">
+          <span>Piel</span>
+          <div class="chips" data-grupo="oscura">
+            <button type="button" data-valor="0">Clara</button>
+            <button type="button" data-valor="1">Oscura</button>
+          </div>
+        </div>
+        <div class="personaje-fila">
+          <span>Peinado</span>
+          <div class="chips" data-grupo="peinado">
+            <button type="button" data-valor="0"></button>
+            <button type="button" data-valor="1"></button>
+            <button type="button" data-valor="2"></button>
+          </div>
+        </div>
+        <div class="personaje-fila">
+          <span>Remera</span>
+          <div class="colores" data-grupo="remera"></div>
+        </div>
+        <div class="personaje-fila">
+          <span>Pantalón</span>
+          <div class="colores" data-grupo="pantalon"></div>
+        </div>
+        <p class="personaje-nota" data-personaje-nota>Se guarda en este navegador: la próxima vez entra con el mismo personaje.</p>
+      </div>
       <p class="inicio-pregunta">¿Cómo quiere recorrerla?</p>
       <div class="inicio-opciones">
         <button type="button" class="opcion" data-empezar="tercera">
@@ -166,7 +200,8 @@ const datos = await Promise.all(
 </main>
 
 <script>
-  import { crearCliente, formato, type Carrito } from '../../scripts/tienda-api';
+  import { crearCliente, formato, leerPerfil, type Carrito } from '../../scripts/tienda-api';
+  import { codificar, decodificar, codigoAlAzar, CODIGOS, COLORES_REMERA, COLORES_PANTALON, PEINADOS_NOMBRES } from '../../scripts/tienda3d/codigo';
   import type { Motor, Modo } from '../../scripts/tienda3d/motor';
   import type { Producto3D } from '../../scripts/tienda3d/escena';
 
@@ -333,18 +368,73 @@ const datos = await Promise.all(
     $('[data-mira]').hidden = m !== 'primera';
   };
 
-  // Cada comprador tiene su propio aspecto (piel, pelo, ropa), el mismo cada vez que vuelve.
-  const aspecto = (() => {
+  // ---------- su personaje ----------
+  // Se elige una vez y queda guardado: en este navegador y, si inició sesión, en su cuenta (así es el
+  // mismo en el celular y en la computadora). El primero que ve es uno al azar, que también se guarda.
+  const CLAVE_PERSONAJE = 'tindershop-aspecto';
+  let aspecto = (() => {
+    const cuenta = leerPerfil()?.personaje;
+    if (cuenta && cuenta > 0) return cuenta;
     try {
-      const guardado = Number(localStorage.getItem('tindershop-aspecto'));
-      if (guardado > 0) return guardado;
-      const nuevo = 1 + Math.floor(Math.random() * 998);
-      localStorage.setItem('tindershop-aspecto', String(nuevo));
-      return nuevo;
+      const guardado = Number(localStorage.getItem(CLAVE_PERSONAJE));
+      if (guardado > 0 && guardado <= CODIGOS) return guardado;
     } catch {
-      return 1 + Math.floor(Math.random() * 998);
+      /* sin almacenamiento */
     }
+    return codigoAlAzar();
   })();
+  let guardarEnCuenta = 0;
+  function guardarPersonaje() {
+    try {
+      localStorage.setItem(CLAVE_PERSONAJE, String(aspecto));
+    } catch {
+      /* sin almacenamiento: dura mientras la página esté abierta */
+    }
+    if (!cliente.conSesion() || leerPerfil()?.personaje === aspecto) return;
+    clearTimeout(guardarEnCuenta);
+    guardarEnCuenta = window.setTimeout(() => cliente.guardarPersonaje(aspecto).catch(() => {}), 600);
+  }
+  guardarPersonaje();
+  const panelPersonaje = $('[data-personaje]');
+  if (cliente.conSesion()) $('[data-personaje-nota]').textContent = 'Se guarda en su cuenta: es el mismo en cualquier dispositivo.';
+  for (const [grupo, colores] of [['remera', COLORES_REMERA], ['pantalon', COLORES_PANTALON]] as const) {
+    const caja = panelPersonaje.querySelector(`[data-grupo="${grupo}"]`)!;
+    colores.forEach((c, i) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.valor = String(i);
+      b.style.background = c;
+      b.setAttribute('aria-label', `${grupo === 'remera' ? 'Remera' : 'Pantalón'} color ${i + 1}`);
+      caja.append(b);
+    });
+  }
+  function pintarPersonaje() {
+    const e = decodificar(aspecto);
+    const valores: Record<string, number> = { mujer: +e.mujer, oscura: +e.oscura, peinado: e.peinado, remera: e.remera, pantalon: e.pantalon };
+    panelPersonaje.querySelectorAll<HTMLElement>('[data-grupo]').forEach((g) => {
+      g.querySelectorAll<HTMLButtonElement>('button').forEach((b) =>
+        b.setAttribute('aria-pressed', String(Number(b.dataset.valor) === valores[g.dataset.grupo!])),
+      );
+    });
+    const nombres = PEINADOS_NOMBRES[e.mujer ? 'mujer' : 'hombre'];
+    panelPersonaje.querySelectorAll<HTMLButtonElement>('[data-grupo="peinado"] button').forEach((b, i) => (b.textContent = nombres[i]));
+  }
+  panelPersonaje.addEventListener('click', (ev) => {
+    const b = (ev.target as HTMLElement).closest<HTMLButtonElement>('button[data-valor]');
+    const g = b?.closest<HTMLElement>('[data-grupo]')?.dataset.grupo;
+    if (!b || !g) return;
+    const e = decodificar(aspecto);
+    const v = Number(b.dataset.valor);
+    if (g === 'mujer') e.mujer = v === 1;
+    if (g === 'oscura') e.oscura = v === 1;
+    if (g === 'peinado') e.peinado = v;
+    if (g === 'remera') e.remera = v;
+    if (g === 'pantalon') e.pantalon = v;
+    aspecto = codificar(e);
+    pintarPersonaje();
+    guardarPersonaje();
+  });
+  pintarPersonaje();
 
   async function empezar(modo: Modo) {
     $('[data-cargando]').hidden = false;
@@ -784,6 +874,65 @@ const datos = await Promise.all(
   }
   .inicio-ayuda {
     font-size: 13px;
+  }
+  .personaje {
+    display: grid;
+    gap: 8px;
+    margin: 6px 0 4px;
+    padding: 14px;
+    border: 1px solid var(--borde);
+    border-radius: 16px;
+    background: #fff;
+    text-align: left;
+  }
+  .personaje .inicio-pregunta {
+    margin: 0 0 2px !important;
+  }
+  .personaje-fila {
+    display: grid;
+    grid-template-columns: 76px 1fr;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--azul-900);
+  }
+  .chips,
+  .colores {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .chips button {
+    padding: 6px 12px;
+    border: 1px solid var(--borde);
+    border-radius: 999px;
+    background: #fff;
+    color: var(--azul-900);
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .chips button[aria-pressed='true'] {
+    border-color: var(--azul-900);
+    background: var(--azul-900);
+    color: #fff;
+  }
+  /* Las muestras las crea el script: necesitan :global (Astro no les pone su marca de estilo). */
+  .colores :global(button) {
+    width: 28px;
+    height: 28px;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    box-shadow: 0 0 0 1px var(--borde);
+    cursor: pointer;
+  }
+  .colores :global(button[aria-pressed='true']) {
+    box-shadow: 0 0 0 3px var(--rojo);
+  }
+  .personaje-nota {
+    margin: 2px 0 0 !important;
+    font-size: 12px;
   }
   .inicio-ayuda[hidden],
   .inicio-cargando[hidden] {

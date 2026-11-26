@@ -55,6 +55,8 @@ export type Perfil = {
   ciudad: string;
   provincia: string;
   postal: string;
+  /** Personaje de la tienda 3D guardado en la cuenta (0 = todavía no eligió). */
+  personaje?: number;
 };
 export type Pedido = {
   numero: string;
@@ -220,6 +222,12 @@ export function crearCliente(API: string) {
       const r = await cuentaApi<{ perfil: Perfil; pedidos: Pedido[] }>('/cuenta');
       guardar(CLAVE_PERFIL, JSON.stringify(r.perfil));
       return r;
+    },
+    /** Guarda el personaje de la tienda 3D en la cuenta (mismo personaje en cualquier dispositivo). */
+    guardarPersonaje: async (codigo: number) => {
+      const r = await cuentaApi<{ perfil: Perfil }>('/personaje', { codigo });
+      guardar(CLAVE_PERFIL, JSON.stringify(r.perfil));
+      return r.perfil;
     },
     guardarCuenta: async (datos: Partial<Perfil>) => {
       const r = await cuentaApi<{ perfil: Perfil }>('/cuenta', datos);
