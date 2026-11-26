@@ -20,6 +20,9 @@ export type Producto3D = {
   sku: string;
   nombre: string;
   precio: string;
+  /** En oferta: precio normal (tachado en la etiqueta) y descuento en %. */
+  precioAnterior?: string;
+  descuento?: number;
   stock: string;
   enStock: boolean;
   resumen: string;
@@ -148,17 +151,39 @@ function texturaPrecio(p: Producto3D) {
   c.width = 256;
   c.height = 96;
   const g = c.getContext('2d')!;
-  g.fillStyle = '#ffffff';
-  g.fillRect(0, 0, 256, 96);
-  g.fillStyle = COLORES.acento;
-  g.fillRect(0, 0, 10, 96);
-  g.fillStyle = COLORES.franja;
-  g.font = '800 44px Sarabun, system-ui, sans-serif';
   g.textBaseline = 'middle';
-  g.fillText(p.precio, 24, 36, 220);
-  g.fillStyle = '#526377';
-  g.font = '500 22px Sarabun, system-ui, sans-serif';
-  g.fillText(p.nombre, 24, 76, 220);
+  if (p.precioAnterior && p.descuento) {
+    // Oferta: etiqueta roja, precio nuevo grande y el de antes tachado con el descuento.
+    g.fillStyle = '#ed2853';
+    g.fillRect(0, 0, 256, 96);
+    g.fillStyle = '#ffffff';
+    g.font = '800 42px Sarabun, system-ui, sans-serif';
+    g.fillText(p.precio, 16, 34, 168);
+    const pct = `−${p.descuento}%`;
+    g.font = '800 24px Sarabun, system-ui, sans-serif';
+    const wp = g.measureText(pct).width + 16;
+    g.fillStyle = '#ffd23f';
+    g.fillRect(256 - wp - 8, 16, wp, 36);
+    g.fillStyle = '#7a0d26';
+    g.fillText(pct, 256 - wp, 35);
+    g.fillStyle = '#ffe3ea';
+    g.font = '600 24px Sarabun, system-ui, sans-serif';
+    const antes = `Antes ${p.precioAnterior}`;
+    g.fillText(antes, 16, 76, 228);
+    const w = Math.min(228, g.measureText(antes).width);
+    g.fillRect(16, 75, w, 2.5);
+  } else {
+    g.fillStyle = '#ffffff';
+    g.fillRect(0, 0, 256, 96);
+    g.fillStyle = COLORES.acento;
+    g.fillRect(0, 0, 10, 96);
+    g.fillStyle = COLORES.franja;
+    g.font = '800 44px Sarabun, system-ui, sans-serif';
+    g.fillText(p.precio, 24, 36, 220);
+    g.fillStyle = '#526377';
+    g.font = '500 22px Sarabun, system-ui, sans-serif';
+    g.fillText(p.nombre, 24, 76, 220);
+  }
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   return t;
@@ -668,7 +693,15 @@ export function construirTienda(
           g.fillStyle = `#${colorBase(p.id).getHexString()}`;
           g.fillRect(cx + 28, cy + 12, 200, 170);
         }
-        g.fillStyle = COLORES.acento;
+        if (p.descuento) {
+          // Oferta: cinta con el descuento sobre la foto.
+          g.fillStyle = '#ed2853';
+          g.fillRect(cx + 28, cy + 12, 92, 34);
+          g.fillStyle = '#ffffff';
+          g.font = '800 22px Sarabun, system-ui, sans-serif';
+          g.fillText(`−${p.descuento}%`, cx + 74, cy + 30);
+        }
+        g.fillStyle = p.descuento ? '#ed2853' : COLORES.acento;
         g.font = '800 30px Sarabun, system-ui, sans-serif';
         g.fillText(p.precio, cx + 128, cy + 206);
         g.fillStyle = '#526377';

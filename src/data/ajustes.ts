@@ -12,6 +12,8 @@ export type Cancion = { url: string; titulo: string };
 type Ajustes = {
   experiencia: Experiencia;
   exhibiciones: Record<string, Exhibicion>;
+  /** Productos con exhibición propia: { id: tipo }. */
+  exhibicionesProducto: Record<string, Exhibicion>;
   pasillos: string[];
   musica: Cancion[];
   sinMusica: boolean;
@@ -21,7 +23,7 @@ const TIPOS: Exhibicion[] = ['gondola', 'perchero', 'maniqui', 'estante', 'exhib
 let cache: Promise<Ajustes> | undefined;
 
 function getAjustes(): Promise<Ajustes> {
-  const vacio: Ajustes = { experiencia: 'tarjetas', exhibiciones: {}, pasillos: [], musica: [], sinMusica: false };
+  const vacio: Ajustes = { experiencia: 'tarjetas', exhibiciones: {}, exhibicionesProducto: {}, pasillos: [], musica: [], sinMusica: false };
   if (!tiendaActiva) return Promise.resolve(vacio);
   cache ??= fetch(`${tiendaUrl}/wp-json/tindershop/v1/ajustes`)
     .then((r) => (r.ok ? r.json() : null))
@@ -31,6 +33,10 @@ function getAjustes(): Promise<Ajustes> {
       for (const [slug, tipo] of Object.entries(d.exhibiciones ?? {})) {
         if (TIPOS.includes(tipo as Exhibicion)) exhibiciones[slug] = tipo as Exhibicion;
       }
+      const exhibicionesProducto: Record<string, Exhibicion> = {};
+      for (const [id, tipo] of Object.entries(d.exhibicionesProducto ?? {})) {
+        if (/^\d+$/.test(id) && TIPOS.includes(tipo as Exhibicion)) exhibicionesProducto[id] = tipo as Exhibicion;
+      }
       const experiencia: Experiencia = d.experiencia === '3d' ? '3d' : 'tarjetas';
       let pasillos: string[] = Array.isArray(d.pasillos) ? d.pasillos.map((l: unknown) => String(l ?? '').slice(0, 40)) : [];
       if (pasillos.every((l) => !l.trim())) pasillos = []; // campo vacío en WordPress = sin letreros escritos
@@ -39,7 +45,7 @@ function getAjustes(): Promise<Ajustes> {
             .filter((c: { url?: unknown }) => typeof c?.url === 'string' && /^https?:\/\//.test(c.url))
             .map((c: { url: string; titulo?: unknown }) => ({ url: c.url, titulo: String(c.titulo ?? '').slice(0, 80) }))
         : [];
-      return { experiencia, exhibiciones, pasillos, musica, sinMusica: d.sinMusica === true };
+      return { experiencia, exhibiciones, exhibicionesProducto, pasillos, musica, sinMusica: d.sinMusica === true };
     })
     .catch(() => vacio);
   return cache;
@@ -69,6 +75,11 @@ export async function getExhibiciones(): Promise<Record<string, Exhibicion>> {
     }
   }
   return (await getAjustes()).exhibiciones;
+}
+
+/** Productos con exhibición propia en la tienda 3D: { id: tipo }. Tiene prioridad sobre la categoría. */
+export async function getExhibicionesProducto(): Promise<Record<string, Exhibicion>> {
+  return (await getAjustes()).exhibicionesProducto;
 }
 
 /** IDs de los productos «destacados» de WooCommerce (la estrella en la lista de productos). */

@@ -13,7 +13,7 @@ import Logo from '../Logo.astro';
 import { rutas, marca, url } from '../../data/sitio';
 import type { Producto } from '../../data/tienda';
 import { storeApiUrl, tiendaUrl } from '../../data/tienda';
-import { getExhibiciones, getDestacados, getPasillos, getMusica } from '../../data/ajustes';
+import { getExhibiciones, getExhibicionesProducto, getDestacados, getPasillos, getMusica } from '../../data/ajustes';
 
 interface Props {
   productos: Producto[];
@@ -25,7 +25,8 @@ const { productos } = Astro.props;
 // Cómo se exhibe cada categoría (WordPress → Productos → Categorías) y los productos destacados.
 const exhibiciones = await getExhibiciones();
 const destacados = new Set(await getDestacados());
-const exhibicionDe = (p: Producto) => p.categorias.map((c) => exhibiciones[c.slug]).find(Boolean) ?? 'gondola';
+const exhibicionesProducto = await getExhibicionesProducto();
+const exhibicionDe = (p: Producto) => exhibicionesProducto[String(p.id)] ?? p.categorias.map((c) => exhibiciones[c.slug]).find(Boolean) ?? 'gondola';
 const pasillos = await getPasillos();
 const musica = await getMusica();
 const datos = await Promise.all(
@@ -43,6 +44,8 @@ const datos = await Promise.all(
       sku: p.sku,
       nombre: p.nombre,
       precio: p.precio,
+      precioAnterior: p.precioAnterior,
+      descuento: p.descuento,
       stock: p.stockTexto,
       enStock: p.enStock,
       resumen: p.resumen,
@@ -101,7 +104,7 @@ const datos = await Promise.all(
   <div class="avisos">
     <button class="enfoco" type="button" data-enfoco hidden>
       <span class="enfoco-nombre" data-enfoco-nombre></span>
-      <span class="enfoco-precio" data-enfoco-precio></span>
+      <span class="enfoco-precio precio" data-enfoco-precio></span>
       <span class="enfoco-tecla" data-enfoco-tecla>Ver (E)</span>
     </button>
     <button class="pagar" type="button" data-pagar-aviso hidden>Pagar en la caja →</button>
@@ -182,7 +185,7 @@ const datos = await Promise.all(
     <p class="mano-ayuda">En la mano · arrastre para darlo vuelta</p>
     <p class="ficha-cat" data-ficha-cat></p>
     <h2 id="mano-nombre" data-ficha-nombre></h2>
-    <p class="ficha-precio" data-ficha-precio></p>
+    <p class="ficha-precio precio" data-ficha-precio></p>
     <p class="ficha-stock" data-ficha-stock></p>
     <p class="ficha-resumen" data-ficha-resumen></p>
     <div class="hoja-pie">
@@ -208,7 +211,7 @@ const datos = await Promise.all(
 </main>
 
 <script>
-  import { crearCliente, formato, leerPerfil, type Carrito } from '../../scripts/tienda-api';
+  import { crearCliente, formato, leerPerfil, pintarPrecio, type Carrito } from '../../scripts/tienda-api';
   import { codificar, decodificar, codigoAlAzar, CODIGOS, COLORES_REMERA, COLORES_PANTALON, PEINADOS_NOMBRES } from '../../scripts/tienda3d/codigo';
   import type { Motor, Modo } from '../../scripts/tienda3d/motor';
   import type { Producto3D } from '../../scripts/tienda3d/escena';
@@ -274,7 +277,7 @@ const datos = await Promise.all(
     enMano = p;
     $('[data-ficha-cat]').textContent = p.categoria;
     $('[data-ficha-nombre]').textContent = p.nombre;
-    $('[data-ficha-precio]').textContent = p.precio;
+    pintarPrecio($('[data-ficha-precio]'), p.precio, p.precioAnterior, p.descuento);
     $('[data-ficha-stock]').textContent = p.stock;
     $('[data-ficha-stock]').classList.toggle('agotado', !p.enStock);
     $('[data-ficha-resumen]').textContent = p.resumen;
@@ -507,7 +510,7 @@ const datos = await Promise.all(
         enfoco.hidden = !p;
         if (p) {
           $('[data-enfoco-nombre]').textContent = p.nombre;
-          $('[data-enfoco-precio]').textContent = p.precio;
+          pintarPrecio($('[data-enfoco-precio]'), p.precio, p.precioAnterior, p.descuento);
         }
       },
       elegir: abrirFicha,

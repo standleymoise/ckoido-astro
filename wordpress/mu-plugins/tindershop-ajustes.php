@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Tindershop – Experiencia de la tienda
  * Description: Elige qué ve el cliente al entrar al sitio en Astro: las tarjetas deslizables (swipe) o la tienda 3D que se recorre caminando. Se configura en Ajustes → Tindershop. Al cambiarlo, el sitio se vuelve a publicar solo (si está el plugin «Publicar el sitio al guardar»).
- * Version: 1.3.0
+ * Version: 1.4.0
  *
  * Ruta pública (solo lectura, la lee Astro al compilar):
  *   GET /wp-json/tindershop/v1/ajustes → { experiencia, exhibiciones: { <slug de categoría>: tipo }, pasillos: [texto, …] }
@@ -14,13 +14,17 @@
  * Tienda 3D: cada categoría de productos elige cómo se exhibe (Productos → Categorías → editar):
  *   góndola (estantería de súper), perchero (ropa colgada), maniquí (conjuntos), estante (ropa doblada y
  *   accesorios) o exhibidor (pantalla de destacados). Los productos «destacados» de WooCommerce (estrella)
- *   también aparecen en el exhibidor de la entrada.
+ *   también aparecen en el exhibidor de la entrada. Un producto puede tener su propia exhibición
+ *   (Productos → editar → Datos del producto → General → «Exhibición en la tienda 3D»); vacío = la de su categoría.
+ *
+ * Ofertas programadas (con fechas): al empezar o terminar, el sitio se vuelve a publicar solo.
  */
 
 defined( 'ABSPATH' ) || exit;
 
 const TINDERSHOP_OPCION_EXPERIENCIA = 'tindershop_experiencia';
 const TINDERSHOP_META_EXHIBICION   = 'tindershop_exhibicion';
+const TINDERSHOP_META_EXHIBICION_PRODUCTO = '_tindershop_exhibicion'; // en cada producto; vacío = la de su categoría
 const TINDERSHOP_OPCION_PASILLOS    = 'tindershop_pasillos';
 const TINDERSHOP_OPCION_PRESENCIA   = 'tindershop_presencia';
 const TINDERSHOP_OPCION_MUSICA      = 'tindershop_musica';         // ids de audios de la biblioteca, separados por coma
@@ -79,6 +83,29 @@ function tindershop_mapa_exhibiciones(): array {
 	return $mapa;
 }
 
+/** { id del producto: tipo } de los productos que eligieron su propia exhibición. */
+function tindershop_mapa_exhibiciones_producto(): array {
+	$mapa = array();
+	$ids  = get_posts(
+		array(
+			'post_type'      => 'product',
+			'post_status'    => 'publish',
+			'posts_per_page' => 500,
+			'fields'         => 'ids',
+			'meta_key'       => TINDERSHOP_META_EXHIBICION_PRODUCTO,
+			'meta_compare'   => '!=',
+			'meta_value'     => '',
+		)
+	);
+	foreach ( $ids as $id ) {
+		$tipo = (string) get_post_meta( $id, TINDERSHOP_META_EXHIBICION_PRODUCTO, true );
+		if ( array_key_exists( $tipo, tindershop_exhibiciones() ) ) {
+			$mapa[ (string) $id ] = $tipo;
+		}
+	}
+	return $mapa;
+}
+
 function tindershop_experiencias(): array {
 	return array(
 		'tarjetas' => 'Tarjetas deslizables (swipe)',
@@ -103,6 +130,7 @@ add_action(
 				'callback'            => fn() => array(
 					'experiencia'  => tindershop_experiencia(),
 					'exhibiciones' => (object) tindershop_mapa_exhibiciones(),
+					'exhibicionesProducto' => (object) tindershop_mapa_exhibiciones_producto(),
 					'pasillos'     => tindershop_pasillos(),
 					'musica'       => tindershop_musica(),
 					'sinMusica'    => '1' === (string) get_option( TINDERSHOP_OPCION_SIN_MUSICA, '' ),
@@ -358,3 +386,44 @@ function tindershop_guardar_exhibicion( $term_id ): void {
 }
 add_action( 'created_product_cat', 'tindershop_guardar_exhibicion' );
 add_action( 'edited_product_cat', 'tindershop_guardar_exhibicion' );
+
+// ---------- Exhibición de un producto (Productos → editar → Datos del producto → General) ----------
+add_action(
+	'woocommerce_product_options_general_product_data',
+	function () {
+		global $post;
+		echo '<div class="options_group">';
+		woocommerce_wp_select(
+			array(
+				'id'          => 'tindershop_exhibicion_producto',
+				'label'       => 'Exhibición en la tienda 3D',
+				'value'       => (string) get_post_meta( $post->ID, TINDERSHOP_META_EXHIBICION_PRODUCTO, true ),
+				'options'     => array( '' => 'Como su categoría' ) + tindershop_exhibiciones(),
+				'desc_tip'    => true,
+				'description' => 'Dónde aparece este producto al recorrer la tienda 3D. «Como su categoría» usa lo elegido en Productos → Categorías.',
+			)
+		);
+		echo '</div>';
+	}
+);
+add_action(
+	'woocommerce_admin_process_product_object',
+	function ( $product ) {
+		if ( ! isset( $_POST['tindershop_exhibicion_producto'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification -- WooCommerce ya verificó el nonce del producto.
+			return;
+		}
+		$tipo = sanitize_key( wp_unslash( $_POST['tindershop_exhibicion_producto'] ) ); // phpcs:ignore WordPress.Security.NonceVerification
+		if ( '' === $tipo || ! array_key_exists( $tipo, tindershop_exhibiciones() ) ) {
+			$product->delete_meta_data( TINDERSHOP_META_EXHIBICION_PRODUCTO );
+		} else {
+			$product->update_meta_data( TINDERSHOP_META_EXHIBICION_PRODUCTO, $tipo );
+		}
+		// Guardar el producto ya vuelve a publicar el sitio (plugin «Publicar el sitio al guardar»).
+	}
+);
+
+// ---------- Ofertas programadas ----------
+// WooCommerce activa y termina las ofertas con fechas una vez por día; ahí se republica el sitio para
+// que los precios tachados aparezcan (o desaparezcan) también en las páginas ya publicadas.
+add_action( 'wc_after_products_starting_sales', 'tindershop_pedir_build' );
+add_action( 'wc_after_products_ending_sales', 'tindershop_pedir_build' );

@@ -14,6 +14,7 @@
 import { Image } from 'astro:assets';
 import type { CollectionEntry } from 'astro:content';
 import Logo from '../Logo.astro';
+import Precio from '../Precio.astro';
 import { rutas, marca } from '../../data/sitio';
 import type { Producto } from '../../data/tienda';
 import { storeApiUrl, tiendaUrl } from '../../data/tienda';
@@ -319,12 +320,13 @@ const provincias = [
             />
           )}
         </div>
+        <span class="cinta-oferta" data-cinta-oferta hidden={!p.descuento}>OFERTA</span>
         <span class="sello sello-carrito" aria-hidden="true">Al carrito</span>
         <span class="sello sello-pasar" aria-hidden="true">Paso</span>
         <span class="sello sello-favorito" aria-hidden="true">Favorito</span>
         <div class="info">
           <h2>{p.nombre}</h2>
-          <p class="precio">{p.precio}</p>
+          <p class="precio"><Precio {...p} /></p>
           <p class={p.enStock ? 'stock' : 'stock agotado'}>{p.stockTexto}</p>
         </div>
         <template data-detalle>
@@ -332,7 +334,7 @@ const provincias = [
             {p.imagenes.map((img) => <img src={img.src} alt={img.alt} loading="lazy" />)}
           </div>
           <h2>{p.nombre}</h2>
-          <p class="precio">{p.precio}</p>
+          <p class="precio"><Precio {...p} /></p>
           <p class={p.enStock ? 'stock' : 'stock agotado'}>{p.stockTexto}</p>
           {p.resumen && <p class="resumen">{p.resumen}</p>}
           {p.descripcion.map((d) => <p>{d}</p>)}
@@ -381,6 +383,7 @@ const provincias = [
   <template data-plantilla-tarjeta>
     <article class="tarjeta" aria-roledescription="tarjeta de producto">
       <div class="foto"><img alt="" draggable="false" decoding="async" /></div>
+      <span class="cinta-oferta" data-cinta-oferta hidden>OFERTA</span>
       <span class="sello sello-carrito" aria-hidden="true">Al carrito</span>
       <span class="sello sello-pasar" aria-hidden="true">Paso</span>
       <span class="sello sello-favorito" aria-hidden="true">Favorito</span>
@@ -474,6 +477,8 @@ const provincias = [
     iniciales,
     leerPerfil,
     type ProductoApi,
+    pintarPrecio,
+    preciosDe,
     formato,
     leerFavoritos,
     guardarFavoritos,
@@ -591,7 +596,10 @@ const provincias = [
         img.loading = 'lazy';
         fotos.append(img);
       });
-      f.append(fotos, el('h2', p.name), el('p', precio, 'precio'), el('p', stock, enStock ? 'stock' : 'stock agotado'));
+      const pr = el('p', '', 'precio');
+      const pp = preciosDe(p);
+      pintarPrecio(pr, pp.precio, pp.precioAnterior, pp.descuento);
+      f.append(fotos, el('h2', p.name), pr, el('p', stock, enStock ? 'stock' : 'stock agotado'));
       const resumen = parrafosDe(p.short_description).join(' ');
       if (resumen) f.append(el('p', resumen, 'resumen'));
       parrafosDe(p.description).forEach((d) => f.append(el('p', d)));
@@ -613,7 +621,9 @@ const provincias = [
       t.dataset.stock = enStock ? '1' : '0';
       t.setAttribute('aria-label', `${p.name}, ${precio}`);
       t.querySelector('.info h2')!.textContent = p.name;
-      t.querySelector('.info .precio')!.textContent = precio;
+      const pp = preciosDe(p);
+      pintarPrecio(t.querySelector('.info .precio')!, pp.precio, pp.precioAnterior, pp.descuento);
+      t.querySelector<HTMLElement>('[data-cinta-oferta]')!.hidden = !pp.descuento;
       const st = t.querySelector<HTMLElement>('.info .stock')!;
       st.textContent = stock;
       st.classList.toggle('agotado', !enStock);

@@ -24,6 +24,9 @@ export interface Producto {
   /** Descripción larga, en párrafos de texto plano. */
   descripcion: string[];
   precio: string;
+  /** En oferta: el precio normal (para tacharlo) y el descuento en % («20»). */
+  precioAnterior?: string;
+  descuento?: number;
   /** Precio como número decimal («6500») y moneda ISO («CRC»), para los datos estructurados. */
   precioNumero: string;
   moneda: string;
@@ -52,7 +55,16 @@ interface StoreApiProducto {
   is_purchasable: boolean;
   is_in_stock: boolean;
   images: { src: string; alt: string }[];
-  prices: { price: string; currency_code: string; currency_minor_unit: number };
+  on_sale?: boolean;
+  prices: { price: string; regular_price?: string; currency_code: string; currency_minor_unit: number };
+}
+
+/** Descuento en % si el producto está en oferta (precio menor que el normal), si no 0. */
+export function descuentoDe(p: { on_sale?: boolean; prices: { price: string; regular_price?: string } }): number {
+  const ahora = Number(p.prices.price);
+  const antes = Number(p.prices.regular_price);
+  if (!p.on_sale || !(antes > ahora) || !(ahora >= 0)) return 0;
+  return Math.max(1, Math.round((1 - ahora / antes) * 100));
 }
 
 const sinHtml = (html: string) =>
@@ -87,6 +99,12 @@ const aProducto = (p: StoreApiProducto): Producto => ({
   resumen: sinHtml(p.short_description),
   descripcion: parrafos(p.description),
   precio: formatoPrecio(p.prices.price, p.prices.currency_code, p.prices.currency_minor_unit),
+  ...(descuentoDe(p)
+    ? {
+        precioAnterior: formatoPrecio(p.prices.regular_price!, p.prices.currency_code, p.prices.currency_minor_unit),
+        descuento: descuentoDe(p),
+      }
+    : {}),
   precioNumero: (Number(p.prices.price) / 10 ** p.prices.currency_minor_unit).toFixed(p.prices.currency_minor_unit),
   moneda: p.prices.currency_code,
   enStock: p.is_purchasable && p.is_in_stock,

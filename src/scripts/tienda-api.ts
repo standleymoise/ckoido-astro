@@ -36,7 +36,8 @@ export type ProductoApi = {
   is_in_stock: boolean;
   stock_availability?: { text: string };
   images: { src: string; thumbnail?: string; srcset?: string; sizes?: string; alt: string }[];
-  prices: Precio & { price: string };
+  on_sale?: boolean;
+  prices: Precio & { price: string; regular_price?: string };
 };
 
 const CLAVE_TOKEN = 'tindershop-cart-token';
@@ -140,6 +141,39 @@ export const formato = (valor: string, p: Precio) =>
     minimumFractionDigits: 0,
     maximumFractionDigits: p.currency_minor_unit,
   }).format(Number(valor) / 10 ** p.currency_minor_unit);
+
+/** Descuento en % si el producto está en oferta, si no 0. */
+export function descuentoDe(p: { on_sale?: boolean; prices: { price: string; regular_price?: string } }): number {
+  const ahora = Number(p.prices.price);
+  const antes = Number(p.prices.regular_price);
+  if (!p.on_sale || !(antes > ahora) || !(ahora >= 0)) return 0;
+  return Math.max(1, Math.round((1 - ahora / antes) * 100));
+}
+
+/** Escribe el precio en un elemento «.precio»: en oferta, con el normal tachado y el descuento. */
+export function pintarPrecio(el: Element, precio: string, precioAnterior?: string, descuento?: number) {
+  el.replaceChildren(precio);
+  if (!precioAnterior || !descuento) return;
+  const del = document.createElement('del');
+  const sr = document.createElement('span');
+  sr.className = 'sr-only';
+  sr.textContent = 'Antes: ';
+  del.append(sr, precioAnterior);
+  const pct = document.createElement('span');
+  pct.className = 'pct';
+  pct.textContent = `−${descuento} %`;
+  el.append(' ', del, ' ', pct);
+}
+
+/** Precio, precio normal y descuento de un producto de la Store API, ya con formato. */
+export function preciosDe(p: ProductoApi) {
+  const descuento = descuentoDe(p);
+  return {
+    precio: formato(p.prices.price, p.prices),
+    precioAnterior: descuento ? formato(p.prices.regular_price!, p.prices) : undefined,
+    descuento: descuento || undefined,
+  };
+}
 
 export const textoPlano = (html: string) => {
   const d = document.createElement('div');

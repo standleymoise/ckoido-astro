@@ -17,6 +17,8 @@ const iniciales = (await getProductos()).map((p) => ({
   sku: p.sku,
   nombre: p.nombre,
   precio: p.precio,
+  precioAnterior: p.precioAnterior,
+  descuento: p.descuento,
   enStock: p.enStock,
   stockTexto: p.stockTexto,
   imagen: p.imagen?.src ?? '',
@@ -56,13 +58,15 @@ const iniciales = (await getProductos()).map((p) => ({
 </Base>
 
 <script>
-  import { crearCliente, formato, leerFavoritos, guardarFavoritos, textoPlano } from '../scripts/tienda-api';
+  import { crearCliente, leerFavoritos, guardarFavoritos, textoPlano, pintarPrecio, preciosDe } from '../scripts/tienda-api';
 
   type Fav = {
     id: number;
     sku: string;
     nombre: string;
     precio: string;
+    precioAnterior?: string;
+    descuento?: number;
     enStock: boolean;
     stockTexto: string;
     imagen: string;
@@ -120,7 +124,7 @@ const iniciales = (await getProductos()).map((p) => ({
             img.alt = p.alt;
           } else img.remove();
           li.querySelector('h2 a')!.textContent = p.nombre;
-          li.querySelector('.precio')!.textContent = p.precio;
+          pintarPrecio(li.querySelector('.precio')!, p.precio, p.precioAnterior, p.descuento);
           const st = li.querySelector<HTMLElement>('.stock')!;
           st.textContent = p.stockTexto;
           st.classList.toggle('agotado', !p.enStock);
@@ -163,7 +167,7 @@ const iniciales = (await getProductos()).map((p) => ({
         id: p.id,
         sku: p.sku,
         nombre: p.name,
-        precio: formato(p.prices.price, p.prices),
+        ...preciosDe(p),
         enStock: p.is_purchasable && p.is_in_stock,
         stockTexto: p.stock_availability?.text || (p.is_in_stock ? 'Disponible' : 'Agotado'),
         imagen: p.images[0]?.src ?? '',

@@ -85,6 +85,43 @@ const ld = jsonLd ? JSON.stringify(jsonLd).replaceAll('<', '\\u003c') : '';
 </html>
 
 <style is:global>
+  /* Precio en oferta: el normal tachado y el descuento (Precio.astro, pintarPrecio). */
+  .precio del {
+    margin-left: 4px;
+    font-size: 0.6em;
+    font-weight: 600;
+    color: #7a8699;
+  }
+  .precio .pct {
+    display: inline-block;
+    margin-left: 4px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #ed2853;
+    color: #fff;
+    font-size: 0.5em;
+    font-weight: 800;
+    vertical-align: 0.35em;
+    letter-spacing: 0.02em;
+  }
+  .cinta-oferta {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    z-index: 2;
+    padding: 5px 12px;
+    border-radius: 999px;
+    background: #ed2853;
+    color: #fff;
+    font-weight: 800;
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    box-shadow: 0 4px 12px rgb(237 40 83 / 0.35);
+    pointer-events: none;
+  }
+  .cinta-oferta[hidden] {
+    display: none;
+  }
   :root {
     --azul-900: #0a4383;
     --azul-850: #09498a;

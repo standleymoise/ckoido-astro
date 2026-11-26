@@ -1,0 +1,15 @@
+---
+// Precio de un producto. En oferta: el precio de oferta, el normal tachado y el descuento («−20 %»).
+// Va dentro de un elemento con clase «precio»; los estilos están en Base.astro (.precio del / .pct).
+interface Props {
+  precio: string;
+  precioAnterior?: string;
+  descuento?: number;
+}
+const { precio, precioAnterior, descuento } = Astro.props;
+---
+{precio}{precioAnterior && descuento ? (
+  <>
+    {' '}<del><span class="sr-only">Antes: </span>{precioAnterior}</del>{' '}<span class="pct">−{descuento} %</span>
+  </>
+) : null}

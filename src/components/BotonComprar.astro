@@ -4,6 +4,7 @@
 // «Comprar ahora» abre la tienda del inicio con ese producto primero. Si no hay tienda
 // (o el SKU no existe en ella), lleva a la lista de productos (comprarHref).
 import { getProducto } from '../data/tienda';
+import Precio from './Precio.astro';
 import { comprarHref, comprarProducto } from '../data/sitio';
 
 interface Props {
@@ -15,7 +16,7 @@ const producto = await getProducto(Astro.props.sku);
 {producto ? (
   <div class="compra">
     <p class="precio">
-      <span class="sr-only">Precio: </span>{producto.precio}
+      <span class="sr-only">Precio: </span><Precio {...producto} />
     </p>
     {producto.enStock ? (
       <a class="btn" href={comprarProducto(producto.sku)}>Comprar ahora</a>
