@@ -541,6 +541,11 @@ const datos = await Promise.all(
     // ?depurar en la dirección: el motor queda en window.tienda3d (para pruebas).
     if (new URLSearchParams(location.search).has('depurar')) Object.assign(window, { tienda3d: motor });
     $('[data-inicio]').hidden = true;
+    try {
+      sessionStorage.removeItem('tindershop-recargado');
+    } catch {
+      /* sin almacenamiento */
+    }
     if (tactil) {
       $('[data-joystick]').hidden = false;
       $('[data-zona-mirar]').hidden = false;
@@ -548,8 +553,27 @@ const datos = await Promise.all(
     if (await motor.vrDisponible()) $('[data-vr]').hidden = false;
   }
   raiz.querySelectorAll<HTMLButtonElement>('[data-empezar]').forEach((b) =>
-    b.addEventListener('click', () => empezar(b.dataset.empezar as Modo).catch(() => {
-      $('[data-cargando]').textContent = 'Su navegador no pudo abrir la tienda 3D. Pruebe con las tarjetas.';
+    b.addEventListener('click', () => empezar(b.dataset.empezar as Modo).catch((e) => {
+      console.error('Tienda 3D:', e);
+      const texto = String((e as Error)?.message ?? e);
+      // Después de una actualización del sitio, una pestaña vieja pide archivos que ya no existen:
+      // se recarga sola una vez para traer la versión nueva.
+      if (/dynamically imported module|Importing a module script failed|error loading dynamically|Failed to fetch/i.test(texto)) {
+        try {
+          if (!sessionStorage.getItem('tindershop-recargado')) {
+            sessionStorage.setItem('tindershop-recargado', '1');
+            location.reload();
+            return;
+          }
+        } catch {
+          /* sin almacenamiento */
+        }
+      }
+      motor = null;
+      raiz.querySelectorAll<HTMLButtonElement>('[data-empezar]').forEach((b) => (b.disabled = false));
+      $('[data-cargando]').textContent = /webgl|context/i.test(texto)
+        ? 'Su navegador tiene apagados los gráficos 3D (WebGL). Active la «aceleración por hardware» en la configuración del navegador y reinícielo, o pruebe con las tarjetas.'
+        : `Su navegador no pudo abrir la tienda 3D (${texto.slice(0, 120)}). Vuelva a intentar o pruebe con las tarjetas.`;
     })),
   );
   $('[data-camara]').addEventListener('click', () => motor && pintarCamara(motor.cambiarModo()));
