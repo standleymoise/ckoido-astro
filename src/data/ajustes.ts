@@ -8,13 +8,13 @@ import { tiendaUrl, tiendaActiva } from './tienda';
 export type Experiencia = 'tarjetas' | '3d';
 export type Exhibicion = 'gondola' | 'perchero' | 'maniqui' | 'estante' | 'exhibidor';
 
-type Ajustes = { experiencia: Experiencia; exhibiciones: Record<string, Exhibicion> };
+type Ajustes = { experiencia: Experiencia; exhibiciones: Record<string, Exhibicion>; pasillos: string[] };
 const TIPOS: Exhibicion[] = ['gondola', 'perchero', 'maniqui', 'estante', 'exhibidor'];
 
 let cache: Promise<Ajustes> | undefined;
 
 function getAjustes(): Promise<Ajustes> {
-  const vacio: Ajustes = { experiencia: 'tarjetas', exhibiciones: {} };
+  const vacio: Ajustes = { experiencia: 'tarjetas', exhibiciones: {}, pasillos: [] };
   if (!tiendaActiva) return Promise.resolve(vacio);
   cache ??= fetch(`${tiendaUrl}/wp-json/tindershop/v1/ajustes`)
     .then((r) => (r.ok ? r.json() : null))
@@ -25,7 +25,8 @@ function getAjustes(): Promise<Ajustes> {
         if (TIPOS.includes(tipo as Exhibicion)) exhibiciones[slug] = tipo as Exhibicion;
       }
       const experiencia: Experiencia = d.experiencia === '3d' ? '3d' : 'tarjetas';
-      return { experiencia, exhibiciones };
+      const pasillos = Array.isArray(d.pasillos) ? d.pasillos.map((l: unknown) => String(l ?? '').slice(0, 40)) : [];
+      return { experiencia, exhibiciones, pasillos };
     })
     .catch(() => vacio);
   return cache;
@@ -66,4 +67,12 @@ export async function getDestacados(): Promise<number[]> {
   } catch {
     return [];
   }
+}
+
+/**
+ * Letreros de los pasillos de la tienda 3D escritos a mano en WordPress (Ajustes → Tindershop), uno por
+ * pasillo. Vacío (o una línea vacía) = el letrero muestra las categorías que hay en ese pasillo.
+ */
+export async function getPasillos(): Promise<string[]> {
+  return (await getAjustes()).pasillos;
 }

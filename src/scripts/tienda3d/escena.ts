@@ -10,7 +10,7 @@
 //   estante   prendas dobladas y accesorios, en la pared izquierda
 //   exhibidor pantalla de destacados a la entrada (también los productos «destacados» de WooCommerce)
 import * as THREE from 'three';
-import { crearPersonaje, type Personaje } from './personaje';
+import { crearPersonaje, aparienciaDe, type Personaje } from './personaje';
 
 export type Exhibicion = 'gondola' | 'perchero' | 'maniqui' | 'estante' | 'exhibidor';
 
@@ -38,6 +38,18 @@ export type Mostrador = {
   cajero: Personaje;
 };
 
+/** Un producto levantado del estante para mirarlo: la pieza que se sostiene y cómo devolverla. */
+export type Tomado = {
+  producto: Producto3D;
+  /** Copia que se sostiene en la mano (misma forma y foto que la del estante). */
+  objeto: THREE.Object3D;
+  /** Dónde estaba (posición y giro en el mundo), para devolverlo al mismo lugar. */
+  desde: THREE.Matrix4;
+  /** Saca la pieza del estante mientras se mira, y la vuelve a poner. */
+  ocultar: () => void;
+  restaurar: () => void;
+};
+
 export type Tienda = {
   /** Mallas contra las que choca la cámara de tercera persona. */
   solidos: THREE.Object3D[];
@@ -45,6 +57,8 @@ export type Tienda = {
   elegibles: THREE.Object3D[];
   /** Qué producto es lo que tocó un rayo (o null). */
   productoDe: (golpe: THREE.Intersection) => Producto3D | null;
+  /** Levantar el producto que tocó el rayo (para mirarlo de cerca). */
+  tomar: (golpe: THREE.Intersection) => Tomado | null;
   /** Textura (foto) de un producto, cuando ya cargó: para las cajitas dentro del carrito 3D. */
   texturaDe: (id: number) => THREE.Texture | null;
   colorDe: (id: number) => THREE.Color;
@@ -183,7 +197,7 @@ function geometriaPrenda() {
 type Lado = { x: number; z0: number; z1: number; mira: 1 | -1 };
 type Region = { lados: Lado[] };
 
-export function construirTienda(escena: THREE.Scene, productos: Producto3D[], ligera: boolean): Tienda {
+export function construirTienda(escena: THREE.Scene, productos: Producto3D[], ligera: boolean, pasillos: string[] = []): Tienda {
   const solidos: THREE.Object3D[] = [];
   const elegibles: THREE.Object3D[] = [];
   const colisiones: Caja[] = [];
@@ -192,6 +206,15 @@ export function construirTienda(escena: THREE.Scene, productos: Producto3D[], li
   const colores = new Map<number, THREE.Color>();
   const esperandoTextura = new Map<number, ((t: THREE.Texture) => void)[]>();
   const cargador = new THREE.TextureLoader();
+  // Pasillos (de izquierda a derecha al entrar) y las categorías que hay en cada uno, para el letrero.
+  const BORDES_PASILLO = [-MEDIO_X, -5, 0, 5, MEDIO_X];
+  const CENTROS_PASILLO = [-8.4, -2.5, 2.5, 8.4];
+  const categoriasPasillo = CENTROS_PASILLO.map(() => new Set<string>());
+  const anotarPasillo = (x: number, categoria: string) => {
+    if (!categoria) return;
+    const i = BORDES_PASILLO.findIndex((b, k) => k > 0 && x < b) - 1;
+    if (i >= 0 && i < categoriasPasillo.length) categoriasPasillo[i].add(categoria);
+  };
 
   // ---------- fotos de productos (una vez cada una, compartidas) ----------
   const colorBase = (id: number) => new THREE.Color(`hsl(${(id * 47) % 360}, 45%, 72%)`);
@@ -374,6 +397,7 @@ export function construirTienda(escena: THREE.Scene, productos: Producto3D[], li
       for (const y of NIVELES) {
         const p = enGondola[n++ % enGondola.length];
         if (!p) continue;
+        anotarPasillo(lado.x + lado.mira * 0.4, p.categoria);
         const lista = huecosPor.get(p.id) ?? [];
         lista.push({ x: lado.x, y, z, mira: lado.mira });
         huecosPor.set(p.id, lista);
@@ -462,6 +486,7 @@ export function construirTienda(escena: THREE.Scene, productos: Producto3D[], li
         const giro = (r.mira * Math.PI) / 2 + Math.sin(z * 7.3) * 0.08;
         const x = r.x + r.mira * (0.05 + (i % 2) * 0.03);
         i++;
+        anotarPasillo(r.x + r.mira * 0.4, p.categoria);
         const l = lugares.get(p.id) ?? [];
         l.push({ x, z, giro });
         lugares.set(p.id, l);
@@ -517,11 +542,13 @@ export function construirTienda(escena: THREE.Scene, productos: Producto3D[], li
     // Pilas de 4 prendas dobladas cada 45 cm; arriba se ve la foto, los costados con su color.
     const doblada = new THREE.BoxGeometry(0.3, 0.055, 0.36);
     doblada.translate(0, 0.0275, 0);
+    doblada.userData.frente = 'y'; // al levantarla, se muestra la cara de arriba (la de la foto)
     const lugares = new Map<number, THREE.Vector3[]>();
     let i = 0;
     for (const y of alturas) {
       for (let z = Z0 + 0.4; z < Z1 - 0.2; z += 0.45) {
         const p = lista[i++ % lista.length];
+        anotarPasillo(x0 + 1, p.categoria);
         const l = lugares.get(p.id) ?? [];
         for (let a = 0; a < 4; a++) l.push(new THREE.Vector3(x0 + 0.3, y + a * 0.058, z));
         lugares.set(p.id, l);
@@ -664,6 +691,75 @@ export function construirTienda(escena: THREE.Scene, productos: Producto3D[], li
     colisiones.push({ minX: -0.7, maxX: 0.7, minZ: 6.25, maxZ: 6.55 });
   }
 
+  // ---------- carteles colgados del techo (con sus cables, como en una tienda real) ----------
+  const matCable = new THREE.MeshStandardMaterial({ color: '#6b7684', metalness: 0.6, roughness: 0.4 });
+  function colgar(x: number, z: number, arriba: number, separacion: number, aLoLargoDeZ = false) {
+    const largoCable = ALTO - arriba;
+    for (const lado of [-1, 1]) {
+      const cable = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, largoCable, 6), matCable);
+      cable.position.set(aLoLargoDeZ ? x : x + lado * separacion, arriba + largoCable / 2, aLoLargoDeZ ? z + lado * separacion : z);
+      escena.add(cable);
+      const anclaje = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.02, 10), matCable);
+      anclaje.position.set(cable.position.x, ALTO - 0.01, cable.position.z);
+      escena.add(anclaje);
+    }
+  }
+
+  // ---------- letreros de los pasillos ----------
+  // «PASILLO N» y lo que hay: el texto escrito en WordPress (Ajustes → Tindershop) o, si no hay, las
+  // categorías de los productos de ese pasillo. Doble faz: se lee al entrar y al salir del pasillo.
+  function letrero(numero: number, texto: string) {
+    const c = document.createElement('canvas');
+    c.width = 1024;
+    c.height = 300;
+    const g = c.getContext('2d')!;
+    g.fillStyle = '#ffffff';
+    g.fillRect(0, 0, 1024, 300);
+    g.fillStyle = COLORES.franja;
+    g.fillRect(0, 0, 1024, 92);
+    g.fillStyle = '#ffffff';
+    g.font = '800 64px Sarabun, system-ui, sans-serif';
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillText('PASILLO ' + numero, 512, 50);
+    g.fillStyle = COLORES.franja;
+    // El texto se achica si es largo (hasta dos líneas).
+    const palabras = texto.split(' ');
+    let lineas = [texto];
+    let px = 84;
+    g.font = '800 ' + px + 'px Sarabun, system-ui, sans-serif';
+    if (g.measureText(texto).width > 960) {
+      const mitad = Math.ceil(palabras.length / 2);
+      lineas = [palabras.slice(0, mitad).join(' '), palabras.slice(mitad).join(' ')];
+      px = 62;
+    }
+    g.font = '800 ' + px + 'px Sarabun, system-ui, sans-serif';
+    lineas.forEach((l, k) => g.fillText(l, 512, 196 + (k - (lineas.length - 1) / 2) * (px + 8), 980));
+    g.fillStyle = COLORES.acento;
+    g.fillRect(0, 288, 1024, 12);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.anisotropy = 4;
+    const tablero = new THREE.Group();
+    tablero.add(new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.76, 0.04), new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.5 })));
+    for (const cara of [1, -1]) {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(2.44, 0.715), new THREE.MeshBasicMaterial({ map: t }));
+      m.position.z = cara * 0.021;
+      if (cara < 0) m.rotation.y = Math.PI;
+      tablero.add(m);
+    }
+    return tablero;
+  }
+  CENTROS_PASILLO.forEach((x, i) => {
+    const escrito = (pasillos[i] ?? '').trim();
+    const texto = escrito || [...categoriasPasillo[i]].sort().join(' · ');
+    if (!texto && !pasillos.length) return; // pasillo vacío: sin letrero
+    const l = letrero(i + 1, texto || ' ');
+    l.position.set(x, 2.95, Z1 + 0.4);
+    escena.add(l);
+    colgar(x, Z1 + 0.4, 3.33, 1.0);
+  });
+
   // ---------- cajas (mostradores) con su cajero ----------
   const matMostrador = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.4 });
   const matCinta = new THREE.MeshStandardMaterial({ color: '#2b3442', roughness: 0.8 });
@@ -689,8 +785,10 @@ export function construirTienda(escena: THREE.Scene, productos: Producto3D[], li
     const s2 = s.clone();
     s2.rotation.y += Math.PI;
     escena.add(s2);
+    colgar(x, 8, 2.85, 0.6, true);
     // Cajero detrás del mostrador, mirando al cliente (hacia el centro de la tienda).
-    const cajero = crearPersonaje({ remera: '#0474ba', pantalon: '#2b3442', piel: '#c98e6b', pelo: '#1d1410' });
+    // Uniforme de la tienda (remera azul), cada cajero con su propia cara y peinado.
+    const cajero = crearPersonaje({ ...aparienciaDe(lado > 0 ? 7 : 12), remera: '#0474ba', pantalon: '#2b3442' });
     const rumboCajero = (lado * Math.PI) / 2; // caja derecha: mira hacia -x; izquierda: hacia +x
     cajero.posicion.set(x + lado * 0.95, 0, 8);
     cajero.rumbo = rumboCajero;
@@ -721,6 +819,44 @@ export function construirTienda(escena: THREE.Scene, productos: Producto3D[], li
         return fila >= 0 && fila < FILAS ? enPantalla[fila * COLS + col] ?? null : null;
       }
       return porMalla.get(golpe.object) ?? null;
+    },
+    tomar(golpe) {
+      const producto = this.productoDe(golpe);
+      if (!producto) return null;
+      const malla = golpe.object as THREE.InstancedMesh;
+      if (malla.isInstancedMesh && golpe.instanceId !== undefined) {
+        // La misma pieza del estante (caja, prenda o ropa doblada), con su foto.
+        const id = golpe.instanceId;
+        const desde = new THREE.Matrix4();
+        malla.getMatrixAt(id, desde);
+        const vacia = new THREE.Matrix4().makeScale(0, 0, 0);
+        return {
+          producto,
+          objeto: new THREE.Mesh(malla.geometry, malla.material),
+          desde,
+          ocultar() {
+            malla.setMatrixAt(id, vacia);
+            malla.instanceMatrix.needsUpdate = true;
+          },
+          restaurar() {
+            malla.setMatrixAt(id, desde);
+            malla.instanceMatrix.needsUpdate = true;
+          },
+        };
+      }
+      // Maniquí o pantalla: se toma una caja del producto, desde donde se tocó.
+      const t = texturas.get(producto.id);
+      const caja2 = new THREE.BoxGeometry(0.22, 0.3, 0.16);
+      caja2.translate(0, 0.15, 0);
+      const lat = new THREE.MeshStandardMaterial({ color: colorDe(producto.id) });
+      const fr = new THREE.MeshStandardMaterial({ color: '#ffffff', map: t ?? null });
+      return {
+        producto,
+        objeto: new THREE.Mesh(caja2, [lat, lat, lat, lat, fr, lat]),
+        desde: new THREE.Matrix4().makeTranslation(golpe.point.x, golpe.point.y - 0.15, golpe.point.z),
+        ocultar() {},
+        restaurar() {},
+      };
     },
     texturaDe: (id) => texturas.get(id) ?? null,
     colorDe,

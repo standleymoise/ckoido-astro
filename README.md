@@ -137,6 +137,16 @@ su dirección (`/tienda-3d/` o `/tarjetas/`). Para probar la 3D como inicio sin 
 - Caminar realista: W/S adelante y atrás (retrocede sin darse vuelta), A/D o el mouse giran al
   comprador y la cámara lo sigue. El comprador tiene cara y empuja un carrito 3D que muestra lo que hay en
   el carrito real de WooCommerce.
+- Levantar un producto: al elegirlo (clic, toque o E) el comprador lo toma del estante y lo tiene en la mano;
+  se lo da vuelta arrastrando y se ven sus datos. «Devolver al estante» lo vuelve a su lugar; «Al carrito»
+  lo deja caer en el carrito y lo agrega a WooCommerce.
+- Letreros de pasillo colgados del techo: «PASILLO N» y las categorías del pasillo, o el texto escrito en
+  WordPress (Ajustes → Tindershop → Letreros de los pasillos, una línea por pasillo).
+- Personas con proporciones reales (codos, rodillas, manos, zapatos, peinados, tonos de piel), distintas
+  para cada comprador (número guardado en el navegador).
+- Multijugador: cada comprador ve a los demás (con su carrito) y no se pueden atravesar. Usa WordPress
+  (`POST /wp-json/tindershop/v1/presencia`, cada ~1 s, sin datos personales); para cientos de personas a la
+  vez conviene un servicio de WebSocket (solo cambia `src/scripts/tienda3d/presencia.ts`).
 - «Ir a pagar»: el comprador camina solo con su carrito hasta la caja (hay un cajero); ahí «Pagar ahora»
   manda al checkout de siempre (`/tarjetas/#carrito`).
 - Exhibición por categoría (WordPress → Productos → Categorías → «Exhibición en la tienda 3D»): góndola,

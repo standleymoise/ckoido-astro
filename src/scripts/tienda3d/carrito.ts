@@ -76,12 +76,12 @@ export function crearCarrito(): Carrito3D {
   marco.position.copy(borde.position);
   grupo.add(marco);
   const manubrio = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, ANCHO + 0.08, 10).rotateZ(Math.PI / 2), rojo);
-  manubrio.position.set(0, BASE + ALTO + 0.12, ZC + LARGO / 2 + 0.08);
+  manubrio.position.set(0, BASE + ALTO + 0.2, ZC + LARGO / 2 + 0.13); // a la altura de las manos
   grupo.add(manubrio);
   for (const lado of [-1, 1]) {
-    const brazo = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.18, 8), metal);
-    brazo.position.set((lado * ANCHO) / 2, BASE + ALTO + 0.06, ZC + LARGO / 2 + 0.05);
-    brazo.rotation.x = -0.5;
+    const brazo = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.24, 8), metal);
+    brazo.position.set((lado * ANCHO) / 2, BASE + ALTO + 0.1, ZC + LARGO / 2 + 0.07);
+    brazo.rotation.x = -0.55;
     grupo.add(brazo);
   }
   // Chasis, patas y ruedas.

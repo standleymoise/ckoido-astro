@@ -12,8 +12,8 @@ import { getImage } from 'astro:assets';
 import Logo from '../Logo.astro';
 import { rutas, marca } from '../../data/sitio';
 import type { Producto } from '../../data/tienda';
-import { storeApiUrl } from '../../data/tienda';
-import { getExhibiciones, getDestacados } from '../../data/ajustes';
+import { storeApiUrl, tiendaUrl } from '../../data/tienda';
+import { getExhibiciones, getDestacados, getPasillos } from '../../data/ajustes';
 
 interface Props {
   productos: Producto[];
@@ -26,6 +26,7 @@ const { productos } = Astro.props;
 const exhibiciones = await getExhibiciones();
 const destacados = new Set(await getDestacados());
 const exhibicionDe = (p: Producto) => p.categorias.map((c) => exhibiciones[c.slug]).find(Boolean) ?? 'gondola';
+const pasillos = await getPasillos();
 const datos = await Promise.all(
   productos.map(async (p) => {
     let img = '';
@@ -52,13 +53,24 @@ const datos = await Promise.all(
   }),
 );
 ---
-<main class="t3d" data-api={storeApiUrl} data-productos={JSON.stringify(datos)} data-pagar={`${rutas.tarjetas}#carrito`}>
+<main
+  class="t3d"
+  data-api={storeApiUrl}
+  data-productos={JSON.stringify(datos)}
+  data-pasillos={JSON.stringify(pasillos)}
+  data-presencia={`${tiendaUrl}/wp-json/tindershop/v1/presencia`}
+  data-pagar={`${rutas.tarjetas}#carrito`}
+>
   <h1 class="sr-only">{marca.nombre}: tienda 3D</h1>
   <div class="lienzo" data-lienzo></div>
   <div class="zona-mirar" data-zona-mirar hidden></div>
 
   <header class="barra">
     <Logo size={150} />
+    <p class="gente" data-gente hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.2" /><path d="M3.5 19a5.5 5.5 0 0 1 11 0" /><circle cx="17" cy="9" r="2.6" /><path d="M15.5 14.2A4.6 4.6 0 0 1 21 19" /></svg>
+      <span data-gente-n></span>
+    </p>
     <div class="barra-botones">
       <a class="btn-redondo" href={rutas.tarjetas} title="Comprar con tarjetas deslizables">
         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="11" height="15" rx="2" /><path d="M9 3h9a2 2 0 0 1 2 2v13" /></svg>
@@ -122,23 +134,19 @@ const datos = await Promise.all(
     </div>
   </section>
 
-  <!-- Ficha del producto -->
-  <dialog class="hoja" data-ficha aria-labelledby="ficha-nombre">
-    <div class="ficha">
-      <img data-ficha-img alt="" width="384" height="384" />
-      <div class="ficha-texto">
-        <p class="ficha-cat" data-ficha-cat></p>
-        <h2 id="ficha-nombre" data-ficha-nombre></h2>
-        <p class="ficha-precio" data-ficha-precio></p>
-        <p class="ficha-stock" data-ficha-stock></p>
-        <p class="ficha-resumen" data-ficha-resumen></p>
-      </div>
-    </div>
+  <!-- Producto en la mano: el panel no tapa el producto, que se ve en 3D y se puede girar -->
+  <section class="mano" data-mano hidden aria-labelledby="mano-nombre">
+    <p class="mano-ayuda">En la mano · arrastre para darlo vuelta</p>
+    <p class="ficha-cat" data-ficha-cat></p>
+    <h2 id="mano-nombre" data-ficha-nombre></h2>
+    <p class="ficha-precio" data-ficha-precio></p>
+    <p class="ficha-stock" data-ficha-stock></p>
+    <p class="ficha-resumen" data-ficha-resumen></p>
     <div class="hoja-pie">
-      <button class="btn btn-borde" type="button" data-cerrar>Seguir recorriendo</button>
-      <button class="btn" type="button" data-agregar>Agregar al carrito</button>
+      <button class="btn btn-borde" type="button" data-devolver>Devolver al estante</button>
+      <button class="btn" type="button" data-agregar>Al carrito</button>
     </div>
-  </dialog>
+  </section>
 
   <!-- Carrito -->
   <dialog class="hoja" data-carrito aria-labelledby="carrito-titulo">
@@ -213,15 +221,13 @@ const datos = await Promise.all(
     sincronizar3D();
   }
 
-  // ---------- ficha ----------
-  const ficha = $<HTMLDialogElement>('[data-ficha]');
-  let enFicha: Producto3D | null = null;
+  // ---------- producto en la mano ----------
+  // El comprador lo levanta del estante (el motor lo anima hasta sus manos), lo mira y decide:
+  // «Devolver al estante» (vuelve a su lugar) o «Al carrito» (cae en el carrito y se agrega de verdad).
+  const mano = $('[data-mano]');
+  let enMano: Producto3D | null = null;
   function abrirFicha(p: Producto3D) {
-    enFicha = p;
-    const img = $<HTMLImageElement>('[data-ficha-img]');
-    img.src = p.img;
-    img.hidden = !p.img;
-    img.alt = p.nombre;
+    enMano = p;
     $('[data-ficha-cat]').textContent = p.categoria;
     $('[data-ficha-nombre]').textContent = p.nombre;
     $('[data-ficha-precio]').textContent = p.precio;
@@ -230,24 +236,36 @@ const datos = await Promise.all(
     $('[data-ficha-resumen]').textContent = p.resumen;
     const b = $<HTMLButtonElement>('[data-agregar]');
     b.disabled = !p.enStock;
-    b.textContent = p.enStock ? 'Agregar al carrito' : 'Agotado';
-    motor?.pausar(true);
-    if (document.pointerLockElement) document.exitPointerLock();
-    ficha.showModal();
+    b.textContent = p.enStock ? 'Al carrito' : 'Agotado';
+    $('[data-enfoco]').hidden = true;
+    mano.hidden = false;
   }
+  async function devolver() {
+    if (!enMano) return;
+    mano.hidden = true;
+    enMano = null;
+    await motor?.soltar('estante');
+  }
+  $('[data-devolver]').addEventListener('click', devolver);
+  addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && enMano) devolver();
+  });
   $('[data-agregar]').addEventListener('click', async () => {
-    if (!enFicha) return;
+    if (!enMano) return;
+    const p = enMano;
     const b = $<HTMLButtonElement>('[data-agregar]');
     b.disabled = true;
     b.textContent = 'Agregando…';
     try {
-      await agregar(enFicha);
-      ficha.close();
-      avisar(`Agregado al carrito: ${enFicha.nombre}`);
+      await agregar(p);
+      mano.hidden = true;
+      enMano = null;
+      avisar(`Al carrito: ${p.nombre}`);
+      await motor?.soltar('carrito');
     } catch (e) {
       avisar(mensajeError(e));
       b.disabled = false;
-      b.textContent = 'Agregar al carrito';
+      b.textContent = 'Al carrito';
     }
   });
 
@@ -258,7 +276,7 @@ const datos = await Promise.all(
   async function abrirCarrito(caja = false) {
     enCaja = caja;
     $('#carrito-titulo').textContent = caja ? 'En la caja' : 'Su carrito';
-    if (ficha.open) ficha.close();
+    if (enMano) await devolver();
     motor?.pausar(true);
     if (document.pointerLockElement) document.exitPointerLock();
     hojaCarrito.showModal();
@@ -299,7 +317,7 @@ const datos = await Promise.all(
   });
   $('[data-pagar-aviso]').addEventListener('click', () => abrirCarrito(true));
 
-  for (const d of [ficha, hojaCarrito]) {
+  for (const d of [hojaCarrito]) {
     d.addEventListener('close', () => motor?.pausar(false));
     d.addEventListener('click', (e) => {
       if (e.target === d || (e.target as HTMLElement).closest('[data-cerrar]')) d.close();
@@ -313,6 +331,19 @@ const datos = await Promise.all(
     etiquetaCamara.textContent = m === 'tercera' ? '3ª' : '1ª';
     $('[data-mira]').hidden = m !== 'primera';
   };
+
+  // Cada comprador tiene su propio aspecto (piel, pelo, ropa), el mismo cada vez que vuelve.
+  const aspecto = (() => {
+    try {
+      const guardado = Number(localStorage.getItem('tindershop-aspecto'));
+      if (guardado > 0) return guardado;
+      const nuevo = 1 + Math.floor(Math.random() * 998);
+      localStorage.setItem('tindershop-aspecto', String(nuevo));
+      return nuevo;
+    } catch {
+      return 1 + Math.floor(Math.random() * 998);
+    }
+  })();
 
   async function empezar(modo: Modo) {
     $('[data-cargando]').hidden = false;
@@ -344,8 +375,16 @@ const datos = await Promise.all(
           return mensajeError(e);
         }
       },
-    }, modo);
+    }, modo, { aspecto, pasillos: JSON.parse(raiz.dataset.pasillos || '[]') });
     pintarCamara(modo);
+    // Multijugador: ver a los demás compradores que están en la tienda en este momento.
+    const { iniciarPresencia } = await import('../../scripts/tienda3d/presencia');
+    const gente = $('[data-gente]');
+    iniciarPresencia(raiz.dataset.presencia!, aspecto, () => motor!.propio(), (otros) => {
+      motor?.otros(otros);
+      gente.hidden = otros.length === 0;
+      $('[data-gente-n]').textContent = otros.length === 1 ? '1 persona más en la tienda' : `${otros.length} personas más en la tienda`;
+    });
     sincronizar3D();
     // ?depurar en la dirección: el motor queda en window.tienda3d (para pruebas).
     if (new URLSearchParams(location.search).has('depurar')) Object.assign(window, { tienda3d: motor });
@@ -752,6 +791,56 @@ const datos = await Promise.all(
     color: var(--azul-900) !important;
   }
 
+  .gente {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 auto 0 10px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--azul-900);
+    font-size: 13px;
+    font-weight: 700;
+    box-shadow: 0 4px 14px rgba(10, 67, 131, 0.14);
+  }
+  .gente[hidden] {
+    display: none;
+  }
+  .gente svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+  }
+  .mano {
+    position: absolute;
+    right: max(16px, env(safe-area-inset-right));
+    top: 50%;
+    transform: translateY(-50%);
+    width: min(340px, 42vw);
+    padding: 18px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.96);
+    color: var(--azul-900);
+    box-shadow: 0 16px 48px rgba(10, 67, 131, 0.25);
+  }
+  .mano[hidden] {
+    display: none;
+  }
+  .mano h2 {
+    margin: 0 0 6px;
+    font-family: var(--font-alt);
+    font-size: 21px;
+    line-height: 1.2;
+  }
+  .mano-ayuda {
+    margin: 0 0 10px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--rojo);
+  }
   .hoja {
     width: min(94vw, 560px);
     max-height: 88svh;
@@ -892,6 +981,29 @@ const datos = await Promise.all(
   }
   .aviso[hidden] {
     display: none;
+  }
+
+  @media (max-width: 720px) {
+    /* En el celular el panel va abajo y el producto se ve arriba. */
+    .mano {
+      top: auto;
+      bottom: max(12px, env(safe-area-inset-bottom));
+      left: 12px;
+      right: 12px;
+      transform: none;
+      width: auto;
+      max-height: 46svh;
+      overflow-y: auto;
+    }
+    .mano .ficha-resumen {
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .gente span {
+      display: none;
+    }
   }
 
   @media (max-width: 520px) {

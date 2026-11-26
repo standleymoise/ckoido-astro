@@ -8,16 +8,17 @@
 //            gira al comprador y la tienda gira con él (la cámara siempre queda detrás o en sus ojos)
 // Las dos cámaras usan la misma posición y orientación: cambiar de cámara no reinicia el recorrido.
 import * as THREE from 'three';
-import { construirTienda, type Producto3D, type Caja, type Mostrador } from './escena';
-import { crearPersonaje, ALTURA_OJOS } from './personaje';
-import { crearCarrito, type ItemCarrito } from './carrito';
+import { construirTienda, type Producto3D, type Caja, type Mostrador, type Tomado } from './escena';
+import { crearPersonaje, aparienciaDe, ALTURA_OJOS, type Personaje } from './personaje';
+import { crearCarrito, type ItemCarrito, type Carrito3D } from './carrito';
+import type { Otro } from './presencia';
 
 export type Modo = 'tercera' | 'primera';
 
 export type Eventos = {
   /** Producto frente al comprador (o null): para el aviso «E para ver». */
   enFoco: (p: Producto3D | null) => void;
-  /** El comprador eligió un producto (clic, toque o E). */
+  /** El comprador levantó un producto del estante para mirarlo (clic, toque o E). */
   elegir: (p: Producto3D) => void;
   /** Entró o salió de la zona de cajas. */
   enCajas: (si: boolean) => void;
@@ -38,7 +39,13 @@ export type Motor = {
   /** Elige el producto bajo un punto de la pantalla (toque / clic). */
   elegirEn: (x: number, y: number) => void;
   elegirEnFoco: () => void;
+  /** Termina de mirar el producto levantado: lo devuelve al estante o lo pone en el carrito. */
+  soltar: (destino: 'estante' | 'carrito') => Promise<void>;
   pausar: (si: boolean) => void;
+  /** Multijugador: los demás compradores (los que no están en la lista se van). */
+  otros: (lista: Otro[]) => void;
+  /** Multijugador: dónde está este comprador (para avisarle a los demás). */
+  propio: () => { x: number; z: number; r: number };
   /** Lo que hay en el carrito real de WooCommerce: se ve adentro del carrito 3D. */
   ponerCarrito: (items: ItemCarrito[]) => void;
   /** El comprador camina solo, con su carrito, hasta la caja más cercana. */
@@ -60,7 +67,20 @@ const RADIO = 0.3;
 const RADIO_CARRITO = 0.36;
 const ALCANCE = 3.2; // metros para elegir un producto
 
-export function iniciarMotor(contenedor: HTMLElement, productos: Producto3D[], ev: Eventos, modoInicial: Modo): Motor {
+export type Opciones = {
+  /** Aspecto del muñeco de este comprador (número estable, guardado en el navegador). */
+  aspecto: number;
+  /** Letreros de los pasillos escritos en WordPress (uno por pasillo). */
+  pasillos: string[];
+};
+
+export function iniciarMotor(
+  contenedor: HTMLElement,
+  productos: Producto3D[],
+  ev: Eventos,
+  modoInicial: Modo,
+  opciones: Opciones = { aspecto: 1, pasillos: [] },
+): Motor {
   // ---------- calidad según el equipo ----------
   const nav = navigator as Navigator & { deviceMemory?: number };
   const tactil = matchMedia('(pointer: coarse)').matches;
@@ -83,8 +103,8 @@ export function iniciarMotor(contenedor: HTMLElement, productos: Producto3D[], e
 
   // near 0,1: más precisión de profundidad (evita que los colores «tiemblen» de cerca).
   const camara = new THREE.PerspectiveCamera(65, contenedor.clientWidth / contenedor.clientHeight, 0.1, 60);
-  const tienda = construirTienda(escena, productos, ligera);
-  const yo = crearPersonaje();
+  const tienda = construirTienda(escena, productos, ligera, opciones.pasillos);
+  const yo = crearPersonaje(aparienciaDe(opciones.aspecto));
   yo.posicion.copy(tienda.inicio);
   yo.rumbo = 0; // mirando hacia adentro de la tienda (-z)
   yo.empujar(true);
@@ -169,6 +189,12 @@ export function iniciarMotor(contenedor: HTMLElement, productos: Producto3D[], e
   // Mirar = girar al comprador (horizontal) y levantar o bajar la vista (vertical).
   function mirar(dx: number, dy: number) {
     const s = tactil ? 0.006 : 0.0032;
+    if (enMano) {
+      // Con el producto en la mano, arrastrar lo da vuelta para verlo por todos lados.
+      enMano.giroY += dx * s * 1.6;
+      enMano.giroX = Math.max(-1.3, Math.min(1.3, enMano.giroX + dy * s * 1.6));
+      return;
+    }
     if (automatico) return;
     yaw -= dx * s;
     pitch -= dy * s;
@@ -183,28 +209,141 @@ export function iniciarMotor(contenedor: HTMLElement, productos: Producto3D[], e
   const centro = new THREE.Vector2(0, 0);
   const punto = new THREE.Vector2();
   let enFoco: Producto3D | null = null;
+  let golpeFoco: THREE.Intersection | null = null;
   const objetivos = () => [...tienda.elegibles, ...tienda.solidos];
 
-  function productoBajo(ndc: THREE.Vector2): Producto3D | null {
+  /** El producto bajo un punto de la pantalla, si está al alcance del comprador. */
+  function golpeBajo(ndc: THREE.Vector2): THREE.Intersection | null {
     rayo.setFromCamera(ndc, camara);
     rayo.far = modo === 'tercera' ? distanciaReal + ALCANCE + 1 : ALCANCE;
     const golpe = rayo.intersectObjects(objetivos(), false)[0];
-    if (!golpe) return null;
-    const p = tienda.productoDe(golpe);
-    if (!p) return null;
+    if (!golpe || !tienda.productoDe(golpe)) return null;
     // Que esté al alcance del comprador (no del otro lado de la tienda).
-    return golpe.point.distanceTo(yo.posicion.clone().setY(golpe.point.y)) <= ALCANCE ? p : null;
+    return golpe.point.distanceTo(yo.posicion.clone().setY(golpe.point.y)) <= ALCANCE ? golpe : null;
   }
   function elegirEn(x: number, y: number, avisarSiNada = true): boolean {
+    if (enMano) return true;
     const r = lienzo.getBoundingClientRect();
     punto.set(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
-    const p = productoBajo(punto);
-    if (p) ev.elegir(p);
-    else if (avisarSiNada && enFoco) ev.elegir(enFoco);
-    return !!p;
+    const golpe = golpeBajo(punto);
+    if (golpe) levantar(golpe);
+    else if (avisarSiNada && golpeFoco) levantar(golpeFoco);
+    return !!golpe;
   }
   function elegirEnFoco() {
-    if (enFoco) ev.elegir(enFoco);
+    if (!enMano && golpeFoco) levantar(golpeFoco);
+  }
+
+  // ---------- levantar un producto, mirarlo y devolverlo (o ponerlo en el carrito) ----------
+  type EnMano = {
+    t: Tomado;
+    fase: 'subir' | 'mirar' | 'estante' | 'carrito';
+    k: number;
+    giroX: number;
+    giroY: number;
+    desdePos: THREE.Vector3;
+    desdeQ: THREE.Quaternion;
+    escalaMano: number;
+    listo?: () => void;
+  };
+  let enMano: EnMano | null = null;
+  const tmpPos = new THREE.Vector3();
+  const tmpQ = new THREE.Quaternion();
+  const tmpE = new THREE.Euler();
+  const giroMano = new THREE.Quaternion(); // aparte de tmpQ: poseEnMano escribe en tmpQ
+  const tmpS = new THREE.Vector3();
+  function levantar(golpe: THREE.Intersection) {
+    const t = tienda.tomar(golpe);
+    if (!t) return;
+    automatico = null;
+    teclas.clear();
+    joy = { x: 0, z: 0 };
+    const desdePos = new THREE.Vector3();
+    const desdeQ = new THREE.Quaternion();
+    t.desde.decompose(desdePos, desdeQ, tmpS);
+    t.objeto.position.copy(desdePos);
+    t.objeto.quaternion.copy(desdeQ);
+    t.objeto.traverse((o) => (o.castShadow = true));
+    escena.add(t.objeto);
+    t.ocultar();
+    // Tamaño en la mano: las cajas chicas se ven más grandes de cerca; la ropa, a su tamaño.
+    const caja = new THREE.Box3().setFromObject(t.objeto);
+    const mayor = Math.max(...caja.getSize(tmpS).toArray());
+    enMano = { t, fase: 'subir', k: 0, giroX: 0, giroY: 0, desdePos, desdeQ, escalaMano: mayor < 0.4 ? 1.1 : 0.7 };
+    yo.sostener(true);
+    if (document.pointerLockElement) document.exitPointerLock();
+    ev.elegir(t.producto);
+  }
+  function soltar(destino: 'estante' | 'carrito') {
+    return new Promise<void>((listo) => {
+      if (!enMano) return listo();
+      enMano.fase = destino;
+      enMano.k = 0;
+      enMano.listo = listo;
+      // Punto de partida de la vuelta: donde está ahora (en la mano).
+      enMano.t.objeto.updateMatrixWorld();
+      (enMano as EnMano & { manoPos?: THREE.Vector3; manoQ?: THREE.Quaternion }).manoPos = enMano.t.objeto.position.clone();
+      (enMano as EnMano & { manoPos?: THREE.Vector3; manoQ?: THREE.Quaternion }).manoQ = enMano.t.objeto.quaternion.clone();
+    });
+  }
+  /** Delante de los ojos (primera persona) o en las manos frente a la cámara (tercera). */
+  /** Dónde se sostiene: frente a los ojos (primera persona) o en las manos del muñeco (tercera). */
+  function puntoMano() {
+    if (modo === 'primera') {
+      const adelante = new THREE.Vector3(0, 0, -1).applyQuaternion(camara.quaternion);
+      const abajo = new THREE.Vector3(0, -1, 0).applyQuaternion(camara.quaternion);
+      return camara.position.clone().addScaledVector(adelante, 0.7).addScaledVector(abajo, 0.05);
+    }
+    return new THREE.Vector3(yo.posicion.x, 1.42, yo.posicion.z).addScaledVector(frenteDe(yaw), 0.48);
+  }
+  const centroLocal = new THREE.Vector3();
+  function poseEnMano(m: EnMano, pos: THREE.Vector3, q: THREE.Quaternion) {
+    // El frente del producto (su cara +z, o +y si es ropa doblada) mira a la cámara; el arrastre lo gira.
+    const geo = (m.t.objeto as THREE.Mesh).geometry;
+    const frente = geo?.userData?.frente === 'y' ? Math.PI / 2 : 0;
+    tmpE.set(m.giroX + frente, m.giroY, 0, 'YXZ');
+    q.copy(camara.quaternion).multiply(giroMano.setFromEuler(tmpE));
+    // Centrado en el punto de la mano (las piezas tienen el origen abajo, no en el medio).
+    if (geo && !geo.boundingBox) geo.computeBoundingBox();
+    geo?.boundingBox?.getCenter(centroLocal);
+    pos.copy(puntoMano()).sub(centroLocal.multiplyScalar(m.escalaMano).applyQuaternion(q));
+  }
+  const suave = (k: number) => k * k * (3 - 2 * k);
+  function animarMano(dt: number) {
+    if (!enMano) return;
+    const m = enMano as EnMano & { manoPos?: THREE.Vector3; manoQ?: THREE.Quaternion };
+    const o = m.t.objeto;
+    poseEnMano(m, tmpPos, tmpQ);
+    if (m.fase === 'subir' || m.fase === 'mirar') {
+      m.k = Math.min(1, m.k + dt / 0.45);
+      const k = suave(m.k);
+      o.position.copy(m.desdePos).lerp(tmpPos, k);
+      o.quaternion.copy(m.desdeQ).slerp(tmpQ, k);
+      o.scale.setScalar(1 + (m.escalaMano - 1) * k);
+      if (m.k >= 1) m.fase = 'mirar';
+      return;
+    }
+    m.k = Math.min(1, m.k + dt / 0.5);
+    const k = suave(m.k);
+    const desde = m.manoPos ?? tmpPos;
+    if (m.fase === 'estante') {
+      o.position.copy(desde).lerp(m.desdePos, k);
+      o.quaternion.copy(m.manoQ ?? tmpQ).slerp(m.desdeQ, k);
+      o.scale.setScalar(m.escalaMano + (1 - m.escalaMano) * k);
+    } else {
+      // Cae en la canasta del carrito (con un pequeño arco).
+      const destino = carrito.grupo.localToWorld(new THREE.Vector3(0, 0.75, -carrito.adelante));
+      o.position.copy(desde).lerp(destino, k);
+      o.position.y += Math.sin(k * Math.PI) * 0.25;
+      o.scale.setScalar(m.escalaMano + (0.45 - m.escalaMano) * k);
+    }
+    if (m.k >= 1) {
+      escena.remove(o);
+      m.t.restaurar(); // en la góndola siempre hay más unidades
+      yo.sostener(false);
+      enMano = null;
+      m.listo?.();
+    }
   }
 
   function cambiarModo(m?: Modo) {
@@ -243,15 +382,75 @@ export function iniciarMotor(contenedor: HTMLElement, productos: Producto3D[], e
   const frenteDe = (r: number) => new THREE.Vector3(-Math.sin(r), 0, -Math.cos(r));
   const puntoCarrito = new THREE.Vector3();
   /** El comprador y su carrito no atraviesan nada: si el carrito choca, el comprador retrocede. */
+  /** Cajas de colisión de los demás compradores y sus carritos (se mueven: se arman en cada cuadro). */
+  let dinamicas: Caja[] = [];
+  const todasLasCajas = () => (dinamicas.length ? tienda.colisiones.concat(dinamicas) : tienda.colisiones);
   function resolver(p: THREE.Vector3) {
-    empujar(p, RADIO, tienda.colisiones, tienda.limites);
+    const cajas = todasLasCajas();
+    empujar(p, RADIO, cajas, tienda.limites);
     for (let i = 0; i < 2; i++) {
       puntoCarrito.copy(p).addScaledVector(frenteDe(yo.rumbo), carrito.adelante);
       const antes = puntoCarrito.clone();
-      empujar(puntoCarrito, RADIO_CARRITO, tienda.colisiones, tienda.limites);
+      empujar(puntoCarrito, RADIO_CARRITO, cajas, tienda.limites);
       p.add(puntoCarrito.sub(antes));
     }
-    empujar(p, RADIO, tienda.colisiones, tienda.limites);
+    empujar(p, RADIO, cajas, tienda.limites);
+  }
+
+  // ---------- multijugador: los demás compradores ----------
+  type Remoto = { p: Personaje; c: Carrito3D; x: number; z: number; r: number; antes: THREE.Vector3 };
+  const remotos = new Map<string, Remoto>();
+  function otros(lista: Otro[]) {
+    const vivos = new Set<string>();
+    for (const o of lista) {
+      vivos.add(o.id);
+      let r = remotos.get(o.id);
+      if (!r) {
+        const p = crearPersonaje(aparienciaDe(o.a));
+        p.empujar(true);
+        p.posicion.set(o.x, 0, o.z);
+        p.rumbo = o.r;
+        const c = crearCarrito();
+        escena.add(p.grupo, c.grupo);
+        r = { p, c, x: o.x, z: o.z, r: o.r, antes: new THREE.Vector3(o.x, 0, o.z) };
+        remotos.set(o.id, r);
+      }
+      r.x = o.x;
+      r.z = o.z;
+      r.r = o.r;
+    }
+    for (const [id, r] of remotos) {
+      if (vivos.has(id)) continue;
+      escena.remove(r.p.grupo, r.c.grupo);
+      remotos.delete(id);
+    }
+  }
+  /** Los demás se mueven suave entre un aviso y el siguiente (llegan cada ~1 s). */
+  function animarRemotos(dt: number) {
+    const nuevas: Caja[] = [];
+    for (const r of remotos.values()) {
+      const pos = r.p.posicion;
+      r.antes.copy(pos);
+      const k = Math.min(1, dt * 3);
+      pos.x += (r.x - pos.x) * k;
+      pos.z += (r.z - pos.z) * k;
+      const dr = Math.atan2(Math.sin(r.r - r.p.rumbo), Math.cos(r.r - r.p.rumbo));
+      r.p.rumbo += dr * Math.min(1, dt * 6);
+      const v = pos.distanceTo(r.antes) / Math.max(dt, 1e-3);
+      // Hacia adelante o hacia atrás, según hacia dónde se mueve respecto de donde mira.
+      const f = frenteDe(r.p.rumbo);
+      const signo = (pos.x - r.antes.x) * f.x + (pos.z - r.antes.z) * f.z >= 0 ? 1 : -1;
+      r.p.animar(dt, v > 0.15 ? signo * v : 0);
+      r.c.grupo.position.set(pos.x, 0, pos.z);
+      r.c.grupo.rotation.y = r.p.rumbo;
+      // No se puede atravesar a otro comprador ni a su carrito.
+      const cc = pos.clone().addScaledVector(f, 0.98);
+      nuevas.push(
+        { minX: pos.x - 0.25, maxX: pos.x + 0.25, minZ: pos.z - 0.25, maxZ: pos.z + 0.25 },
+        { minX: cc.x - 0.3, maxX: cc.x + 0.3, minZ: cc.z - 0.3, maxZ: cc.z + 0.3 },
+      );
+    }
+    dinamicas = nuevas;
   }
 
   // ---------- ir solo a la caja ----------
@@ -427,6 +626,7 @@ export function iniciarMotor(contenedor: HTMLElement, productos: Producto3D[], e
     // de otra pestaña no «salta» de golpe.
     const dt = Math.min(reloj.getDelta(), 0.1);
     tienda.animar(dt);
+    animarRemotos(dt);
     if (renderer.xr.isPresenting) {
       controlesVR(dt);
       moverCarrito();
@@ -449,6 +649,7 @@ export function iniciarMotor(contenedor: HTMLElement, productos: Producto3D[], e
     giro = Math.max(-1, Math.min(1, giro));
     let velocidad = 0;
 
+    if (enMano) avance = giro = 0; // con un producto en la mano, el comprador se queda quieto
     if (automatico && (Math.abs(avance) > 0.1 || Math.abs(giro) > 0.1)) automatico = null; // el cliente retoma el control
 
     if (automatico) {
@@ -511,14 +712,18 @@ export function iniciarMotor(contenedor: HTMLElement, productos: Producto3D[], e
       // Por encima del hombro derecho y mirando un poco por delante: se ve el carrito y lo que hay
       // adentro, sin que el cuerpo lo tape.
       const f = frenteDe(yaw);
-      objetivo.set(yo.posicion.x, 1.3, yo.posicion.z).addScaledVector(f, 0.55).add(new THREE.Vector3(-f.z, 0, f.x).multiplyScalar(0.45));
-      const cp = Math.cos(pitch);
-      deseada.set(Math.sin(yaw) * cp, -Math.sin(pitch), Math.cos(yaw) * cp).normalize();
+      // Con un producto en la mano, la cámara se acerca por encima del hombro y mira lo que sostiene.
+      const cerca = !!enMano;
+      if (cerca) objetivo.copy(puntoMano());
+      else objetivo.set(yo.posicion.x, 1.3, yo.posicion.z).addScaledVector(f, 0.55).add(new THREE.Vector3(-f.z, 0, f.x).multiplyScalar(0.45));
+      const alejarse = cerca ? 1.05 : distancia;
+      const cp = Math.cos(cerca ? -0.32 : pitch);
+      deseada.set(Math.sin(yaw + (cerca ? 0.45 : 0)) * cp, -Math.sin(cerca ? -0.32 : pitch), Math.cos(yaw + (cerca ? 0.45 : 0)) * cp).normalize();
       // Que la cámara no atraviese paredes ni estanterías: se acerca si algo se interpone.
       rayo.set(objetivo, deseada);
-      rayo.far = distancia;
+      rayo.far = alejarse;
       const golpe = rayo.intersectObjects(tienda.solidos, false)[0];
-      const meta = golpe ? Math.max(0.6, golpe.distance - 0.25) : distancia;
+      const meta = golpe ? Math.max(0.6, golpe.distance - 0.25) : alejarse;
       distanciaReal += (meta - distanciaReal) * Math.min(1, dt * (meta < distanciaReal ? 20 : 6));
       camara.position.copy(objetivo).addScaledVector(deseada, distanciaReal);
       camara.position.y = Math.max(0.3, camara.position.y);
@@ -528,7 +733,11 @@ export function iniciarMotor(contenedor: HTMLElement, productos: Producto3D[], e
     // Producto frente al comprador (cada 6 cuadros: alcanza y ahorra trabajo).
     if (++cuadro % 6 === 0) {
       let p: Producto3D | null = null;
-      if (modo === 'primera') p = productoBajo(centro);
+      let golpeP: THREE.Intersection | null = null;
+      if (modo === 'primera') {
+        golpeP = golpeBajo(centro);
+        p = golpeP ? tienda.productoDe(golpeP) : null;
+      }
       if (!p) {
         // Lo que está delante del comprador (más allá del carrito), a la altura del pecho y la
         // cintura, y un poco corrido a los costados para no escaparse entre dos cajas.
@@ -540,11 +749,13 @@ export function iniciarMotor(contenedor: HTMLElement, productos: Producto3D[], e
             rayo.far = 2.4;
             const golpe = rayo.intersectObjects(objetivos(), false)[0];
             p = golpe ? tienda.productoDe(golpe) : null;
+            golpeP = p ? golpe : null;
             if (p) break buscar;
           }
         }
       }
-      if (p !== enFoco) {
+      golpeFoco = golpeP;
+      if (p !== enFoco && !enMano) {
         enFoco = p;
         ev.enFoco(p);
       }
@@ -557,6 +768,7 @@ export function iniciarMotor(contenedor: HTMLElement, productos: Producto3D[], e
       }
     }
 
+    animarMano(dt);
     renderer.render(escena, camara);
   }
   renderer.setAnimationLoop(bucle);
@@ -583,6 +795,9 @@ export function iniciarMotor(contenedor: HTMLElement, productos: Producto3D[], e
     zoom,
     elegirEn: (x, y) => void elegirEn(x, y),
     elegirEnFoco,
+    soltar,
+    otros,
+    propio: () => ({ x: +yo.posicion.x.toFixed(2), z: +yo.posicion.z.toFixed(2), r: +yaw.toFixed(2) }),
     pausar: (si) => {
       pausado = si;
       if (si) teclas.clear();
