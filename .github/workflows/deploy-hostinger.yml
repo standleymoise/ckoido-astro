@@ -43,7 +43,9 @@ jobs:
 
       - name: Build
         run: |
-          npm ci
+          # npm en Windows a veces deja afuera dependencias opcionales de Linux en el lock: si `npm ci`
+          # se queja, se instala igual con `npm install` (mismas versiones del package.json).
+          npm ci || npm install --no-audit --no-fund
           npm run build
 
       - name: Publicar en la rama hostinger
