@@ -2,14 +2,53 @@
 /**
  * Plugin Name: Tindershop – Experiencia de la tienda
  * Description: Elige qué ve el cliente al entrar al sitio en Astro: las tarjetas deslizables (swipe) o la tienda 3D que se recorre caminando. Se configura en Ajustes → Tindershop. Al cambiarlo, el sitio se vuelve a publicar solo (si está el plugin «Publicar el sitio al guardar»).
- * Version: 1.0.0
+ * Version: 1.1.0
  *
- * Ruta pública (solo lectura, la lee Astro al compilar): GET /wp-json/tindershop/v1/ajustes → { experiencia: "tarjetas" | "3d" }
+ * Ruta pública (solo lectura, la lee Astro al compilar):
+ *   GET /wp-json/tindershop/v1/ajustes → { experiencia: "tarjetas" | "3d", exhibiciones: { <slug de categoría>: tipo } }
+ *
+ * Tienda 3D: cada categoría de productos elige cómo se exhibe (Productos → Categorías → editar):
+ *   góndola (estantería de súper), perchero (ropa colgada), maniquí (conjuntos), estante (ropa doblada y
+ *   accesorios) o exhibidor (pantalla de destacados). Los productos «destacados» de WooCommerce (estrella)
+ *   también aparecen en el exhibidor de la entrada.
  */
 
 defined( 'ABSPATH' ) || exit;
 
 const TINDERSHOP_OPCION_EXPERIENCIA = 'tindershop_experiencia';
+const TINDERSHOP_META_EXHIBICION   = 'tindershop_exhibicion';
+
+function tindershop_exhibiciones(): array {
+	return array(
+		'gondola'   => 'Góndola (estantería de supermercado)',
+		'perchero'  => 'Perchero (prendas colgadas)',
+		'maniqui'   => 'Maniquí (conjuntos completos)',
+		'estante'   => 'Estante (prendas dobladas y accesorios)',
+		'exhibidor' => 'Exhibidor (pantalla de destacados)',
+	);
+}
+
+/** { slug de la categoría: tipo } solo de las que no usan la góndola (la de siempre). */
+function tindershop_mapa_exhibiciones(): array {
+	$mapa  = array();
+	$terms = get_terms(
+		array(
+			'taxonomy'   => 'product_cat',
+			'hide_empty' => false,
+			'meta_key'   => TINDERSHOP_META_EXHIBICION,
+		)
+	);
+	if ( is_wp_error( $terms ) ) {
+		return $mapa;
+	}
+	foreach ( $terms as $t ) {
+		$tipo = (string) get_term_meta( $t->term_id, TINDERSHOP_META_EXHIBICION, true );
+		if ( $tipo && 'gondola' !== $tipo && array_key_exists( $tipo, tindershop_exhibiciones() ) ) {
+			$mapa[ $t->slug ] = $tipo;
+		}
+	}
+	return $mapa;
+}
 
 function tindershop_experiencias(): array {
 	return array(
@@ -32,7 +71,10 @@ add_action(
 			array(
 				'methods'             => 'GET',
 				'permission_callback' => '__return_true',
-				'callback'            => fn() => array( 'experiencia' => tindershop_experiencia() ),
+				'callback'            => fn() => array(
+					'experiencia'  => tindershop_experiencia(),
+					'exhibiciones' => (object) tindershop_mapa_exhibiciones(),
+				),
 			)
 		);
 	}
@@ -101,3 +143,45 @@ function tindershop_pantalla_ajustes(): void {
 	</div>
 	<?php
 }
+
+// ---------- Exhibición por categoría (Productos → Categorías) ----------
+function tindershop_campo_exhibicion( string $actual = 'gondola' ): void {
+	echo '<select name="tindershop_exhibicion" id="tindershop_exhibicion">';
+	foreach ( tindershop_exhibiciones() as $valor => $texto ) {
+		printf( '<option value="%s"%s>%s</option>', esc_attr( $valor ), selected( $actual, $valor, false ), esc_html( $texto ) );
+	}
+	echo '</select>';
+}
+add_action(
+	'product_cat_add_form_fields',
+	function () {
+		echo '<div class="form-field"><label for="tindershop_exhibicion">Exhibición en la tienda 3D</label>';
+		tindershop_campo_exhibicion();
+		echo '<p>Cómo se muestran los productos de esta categoría al recorrer la tienda 3D.</p></div>';
+	}
+);
+add_action(
+	'product_cat_edit_form_fields',
+	function ( $term ) {
+		$actual = (string) get_term_meta( $term->term_id, TINDERSHOP_META_EXHIBICION, true ) ?: 'gondola';
+		echo '<tr class="form-field"><th scope="row"><label for="tindershop_exhibicion">Exhibición en la tienda 3D</label></th><td>';
+		tindershop_campo_exhibicion( $actual );
+		echo '<p class="description">Cómo se muestran los productos de esta categoría al recorrer la tienda 3D.</p></td></tr>';
+	}
+);
+function tindershop_guardar_exhibicion( $term_id ): void {
+	if ( ! isset( $_POST['tindershop_exhibicion'] ) || ! current_user_can( 'manage_product_terms' ) ) {
+		return;
+	}
+	$tipo = sanitize_key( wp_unslash( $_POST['tindershop_exhibicion'] ) );
+	if ( ! array_key_exists( $tipo, tindershop_exhibiciones() ) ) {
+		return;
+	}
+	$antes = (string) get_term_meta( $term_id, TINDERSHOP_META_EXHIBICION, true );
+	update_term_meta( $term_id, TINDERSHOP_META_EXHIBICION, $tipo );
+	if ( $antes !== $tipo ) {
+		tindershop_pedir_build();
+	}
+}
+add_action( 'created_product_cat', 'tindershop_guardar_exhibicion' );
+add_action( 'edited_product_cat', 'tindershop_guardar_exhibicion' );

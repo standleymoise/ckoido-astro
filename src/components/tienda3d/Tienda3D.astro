@@ -13,6 +13,7 @@ import Logo from '../Logo.astro';
 import { rutas, marca } from '../../data/sitio';
 import type { Producto } from '../../data/tienda';
 import { storeApiUrl } from '../../data/tienda';
+import { getExhibiciones, getDestacados } from '../../data/ajustes';
 
 interface Props {
   productos: Producto[];
@@ -21,6 +22,10 @@ const { productos } = Astro.props;
 
 // Fotos copiadas al propio sitio y achicadas (384 px): las texturas de WebGL necesitan el mismo
 // dominio (o CORS) y así pesan poco.
+// Cómo se exhibe cada categoría (WordPress → Productos → Categorías) y los productos destacados.
+const exhibiciones = await getExhibiciones();
+const destacados = new Set(await getDestacados());
+const exhibicionDe = (p: Producto) => p.categorias.map((c) => exhibiciones[c.slug]).find(Boolean) ?? 'gondola';
 const datos = await Promise.all(
   productos.map(async (p) => {
     let img = '';
@@ -41,6 +46,8 @@ const datos = await Promise.all(
       resumen: p.resumen,
       img,
       categoria: p.categorias[0]?.nombre ?? '',
+      exhibicion: exhibicionDe(p),
+      destacado: destacados.has(p.id),
     };
   }),
 );
@@ -77,7 +84,7 @@ const datos = await Promise.all(
       <span class="enfoco-precio" data-enfoco-precio></span>
       <span class="enfoco-tecla" data-enfoco-tecla>Ver (E)</span>
     </button>
-    <a class="pagar" data-pagar-aviso hidden>Pagar en la caja →</a>
+    <button class="pagar" type="button" data-pagar-aviso hidden>Pagar en la caja →</button>
   </div>
   <div class="mira" data-mira hidden aria-hidden="true"></div>
 
@@ -106,10 +113,10 @@ const datos = await Promise.all(
         </button>
       </div>
       <p class="inicio-ayuda" data-ayuda-pc>
-        <kbd>W A S D</kbd> caminar · <kbd>Shift</kbd> correr · mouse para mirar · clic o <kbd>E</kbd> ver producto · <kbd>C</kbd> cambiar cámara
+        <kbd>W</kbd>/<kbd>S</kbd> adelante y atrás · <kbd>A</kbd>/<kbd>D</kbd> girar · <kbd>Shift</kbd> correr · mouse para mirar · clic o <kbd>E</kbd> ver producto · <kbd>C</kbd> cambiar cámara
       </p>
       <p class="inicio-ayuda" data-ayuda-tactil hidden>
-        Joystick a la izquierda para caminar · arrastre para mirar · toque un producto para verlo
+        Joystick: arriba y abajo para caminar, a los lados para girar · arrastre para mirar · toque un producto para verlo
       </p>
       <p class="inicio-cargando" data-cargando hidden>Armando la tienda…</p>
     </div>
@@ -141,7 +148,8 @@ const datos = await Promise.all(
     <p class="carrito-total" data-carrito-total></p>
     <div class="hoja-pie">
       <button class="btn btn-borde" type="button" data-cerrar>Seguir comprando</button>
-      <a class="btn" data-ir-pagar>Pagar</a>
+      <button class="btn" type="button" data-ir-caja>Ir a pagar</button>
+      <a class="btn" data-ir-pagar hidden>Pagar ahora</a>
     </div>
   </dialog>
 
@@ -163,7 +171,6 @@ const datos = await Promise.all(
   $('[data-ayuda-pc]').hidden = tactil;
   $('[data-ayuda-tactil]').hidden = !tactil;
   $<HTMLAnchorElement>('[data-ir-pagar]').href = urlPagar;
-  $<HTMLAnchorElement>('[data-pagar-aviso]').href = urlPagar;
   $('[data-enfoco-tecla]').textContent = tactil ? 'Tocar para ver' : 'Ver (E)';
 
   // ---------- avisos ----------
@@ -188,9 +195,13 @@ const datos = await Promise.all(
     c.textContent = String(n);
     c.hidden = n === 0;
   }
+  /** Lo que hay en el carrito real se ve adentro del carrito 3D que empuja el comprador. */
+  const sincronizar3D = () =>
+    motor?.ponerCarrito((carrito?.items ?? []).map((i) => ({ id: i.id, cantidad: i.quantity })));
   async function cargarCarrito() {
     carrito = await cliente.carrito();
     pintarContador();
+    sincronizar3D();
     return carrito;
   }
   if (cliente.tieneCarrito()) cargarCarrito().catch(() => {});
@@ -199,6 +210,7 @@ const datos = await Promise.all(
     if (!p.enStock) throw new Error('Este producto está agotado por ahora.');
     carrito = await cliente.agregar(p.id);
     pintarContador();
+    sincronizar3D();
   }
 
   // ---------- ficha ----------
@@ -241,7 +253,11 @@ const datos = await Promise.all(
 
   // ---------- ver carrito ----------
   const hojaCarrito = $<HTMLDialogElement>('[data-carrito]');
-  async function abrirCarrito() {
+  // En la caja: el mismo panel, con el cajero esperando y el botón para pagar.
+  let enCaja = false;
+  async function abrirCarrito(caja = false) {
+    enCaja = caja;
+    $('#carrito-titulo').textContent = caja ? 'En la caja' : 'Su carrito';
     if (ficha.open) ficha.close();
     motor?.pausar(true);
     if (document.pointerLockElement) document.exitPointerLock();
@@ -252,7 +268,8 @@ const datos = await Promise.all(
       const c = cliente.tieneCarrito() ? await cargarCarrito() : null;
       const items = c?.items ?? [];
       $('[data-carrito-vacio]').hidden = items.length > 0;
-      $('[data-ir-pagar]').hidden = items.length === 0;
+      $('[data-ir-pagar]').hidden = items.length === 0 || !enCaja;
+      $('[data-ir-caja]').hidden = items.length === 0 || enCaja;
       $('[data-carrito-total]').textContent = c && items.length ? `Total: ${formato(c.totals.total_price, c.totals)}` : '';
       for (const it of items) {
         const li = document.createElement('li');
@@ -272,7 +289,15 @@ const datos = await Promise.all(
       $('[data-carrito-vacio]').textContent = 'No se pudo cargar el carrito. Revise su conexión.';
     }
   }
-  $('[data-ver-carrito]').addEventListener('click', abrirCarrito);
+  $('[data-ver-carrito]').addEventListener('click', () => abrirCarrito(false));
+  // «Ir a pagar»: el comprador camina solo, con su carrito, hasta la caja.
+  $('[data-ir-caja]').addEventListener('click', () => {
+    hojaCarrito.close();
+    if (!motor) return void (location.href = urlPagar);
+    motor.irACaja();
+    avisar('Yendo a la caja…');
+  });
+  $('[data-pagar-aviso]').addEventListener('click', () => abrirCarrito(true));
 
   for (const d of [ficha, hojaCarrito]) {
     d.addEventListener('close', () => motor?.pausar(false));
@@ -304,6 +329,10 @@ const datos = await Promise.all(
         }
       },
       elegir: abrirFicha,
+      llegoACaja() {
+        avisar('¡Hola! Bienvenido a la caja.');
+        abrirCarrito(true);
+      },
       enCajas(si) {
         $('[data-pagar-aviso]').hidden = !si || !(carrito?.items_count);
       },
@@ -317,6 +346,7 @@ const datos = await Promise.all(
       },
     }, modo);
     pintarCamara(modo);
+    sincronizar3D();
     // ?depurar en la dirección: el motor queda en window.tienda3d (para pruebas).
     if (new URLSearchParams(location.search).has('depurar')) Object.assign(window, { tienda3d: motor });
     $('[data-inicio]').hidden = true;
@@ -566,7 +596,10 @@ const datos = await Promise.all(
   }
   .pagar {
     padding: 10px 18px;
+    border: 0;
     border-radius: 999px;
+    font: inherit;
+    cursor: pointer;
     background: var(--rojo);
     color: #fff;
     font-weight: 700;

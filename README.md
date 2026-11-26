@@ -134,7 +134,14 @@ su dirección (`/tienda-3d/` o `/tarjetas/`). Para probar la 3D como inicio sin 
 - Computadora: WASD/flechas, mouse, clic o E, C (cámara), Shift (correr), rueda (zoom).
   Celular: joystick, arrastrar para mirar, tocar producto, pellizcar (zoom). VR (WebXR): gatillo sobre
   un producto lo agrega; sobre el piso, teletransporte; sticks para caminar y girar.
-- El carrito es el mismo de WooCommerce; para pagar manda a `/tarjetas/#carrito` (checkout de siempre).
+- Caminar realista: W/S adelante y atrás (retrocede sin darse vuelta), A/D o el mouse giran al
+  comprador y la cámara lo sigue. El comprador tiene cara y empuja un carrito 3D que muestra lo que hay en
+  el carrito real de WooCommerce.
+- «Ir a pagar»: el comprador camina solo con su carrito hasta la caja (hay un cajero); ahí «Pagar ahora»
+  manda al checkout de siempre (`/tarjetas/#carrito`).
+- Exhibición por categoría (WordPress → Productos → Categorías → «Exhibición en la tienda 3D»): góndola,
+  perchero (ropa colgada), maniquí, estante (ropa doblada) o exhibidor (pantalla de la entrada, junto con los
+  productos destacados de WooCommerce). Para probar sin WordPress: `EXHIBICIONES='{"ropa":"perchero"}'`.
 - Rendimiento: geometría simple (sin modelos que descargar), InstancedMesh por producto, fotos de 384 px
   copiadas al sitio al compilar y cargadas de a poco, sombras solo en equipos potentes, Three.js se
   descarga recién al entrar. `?depurar` deja el motor en `window.tienda3d` para pruebas.
