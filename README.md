@@ -1,13 +1,13 @@
 # CK Oído — sitio web (Astro)
 
-**Tindershop**: tienda en la que se compra deslizando tarjetas, construida con [Astro](https://astro.build) y WooCommerce (Store API). El repositorio conserva su nombre anterior (`ckoido-astro`) porque de él dependen el despliegue de Hostinger y la vista previa de GitHub Pages.
+**Tindershop**: tienda en la que se compra deslizando tarjetas, construida con [Astro](https://astro.build) y WooCommerce (Store API).
 
-**Sitio publicado:** https://standleymoise.github.io/ckoido-astro/
+**Sitio publicado:** https://standleymoise.github.io/tindershop/
 
 ## Publicación (GitHub Pages)
 
 Cada push a `main` construye y publica el sitio con `.github/workflows/deploy.yml`.
-El sitio vive en el subdirectorio `/ckoido-astro`, así que todas las rutas internas y
+El sitio vive en el subdirectorio `/tindershop`, así que todas las rutas internas y
 archivos de `public/` se escriben con `url('/ruta')` de `src/data/sitio.ts`.
 
 Para un dominio propio: configurarlo en *Settings → Pages* del repo y definir en el
@@ -78,14 +78,14 @@ Menú, redes sociales, teléfonos y dirección: `src/data/sitio.ts`.
 
 ## Panel de contenido del blog (/admin)
 
-El blog se edita desde **https://standleymoise.github.io/ckoido-astro/admin/** con
+El blog se edita desde **https://standleymoise.github.io/tindershop/admin/** con
 [Sveltia CMS](https://sveltiacms.app) (compatible con Decap CMS; configuración en `public/admin/config.yml`).
 
 **Para entrar:**
 
 1. Crear un token de GitHub (una sola vez, por persona):
    *GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token*.
-   - Repository access: *Only select repositories* → `ckoido-astro`.
+   - Repository access: *Only select repositories* → `tindershop`.
    - Permissions → Repository: **Contents: Read and write** (Metadata se agrega sola).
    - El botón del panel abre esa página de GitHub con los permisos ya marcados.
 2. En `/admin`, «Iniciar sesión con un token de acceso» y pegar el token. Queda guardado en ese navegador.
@@ -94,7 +94,7 @@ El blog se edita desde **https://standleymoise.github.io/ckoido-astro/admin/** c
 y su imagen (`src/assets/blog/`), y GitHub Actions vuelve a publicar el sitio en 1-2 minutos.
 
 La persona necesita acceso de escritura al repo (colaboradora en GitHub). En local (`npm run dev`)
-el panel está en `http://localhost:4321/ckoido-astro/admin/index.html` y permite «Trabajar con un repositorio local».
+el panel está en `http://localhost:4321/tindershop/admin/index.html` y permite «Trabajar con un repositorio local».
 
 ## Formularios (Formspree)
 

@@ -3,7 +3,7 @@
 
 backend:
   name: github
-  repo: standleymoise/ckoido-astro
+  repo: standleymoise/tindershop
   branch: main
   # Solo token: GitHub Pages no tiene servidor OAuth para «Iniciar sesión con GitHub».
   auth_methods: [token]
@@ -14,10 +14,10 @@ backend:
     uploadMedia: 'Blog: subir imagen «{{path}}»'
     deleteMedia: 'Blog: borrar imagen «{{path}}»'
 
-site_url: https://standleymoise.github.io/ckoido-astro/
-display_url: https://standleymoise.github.io/ckoido-astro/
+site_url: https://standleymoise.github.io/tindershop/
+display_url: https://standleymoise.github.io/tindershop/
 logo:
-  src: /ckoido-astro/favicon.svg
+  src: /tindershop/favicon.svg
 
 # Carpeta global de medios (solo para colecciones futuras; el blog define la suya abajo).
 media_folder: public/img/cms
@@ -46,8 +46,8 @@ collections:
       default:
         field: date
         direction: descending
-    # Ruta absoluta: el sitio vive en /ckoido-astro (GitHub Pages).
-    preview_path: /ckoido-astro/blog/{{slug}}/
+    # Ruta absoluta: el sitio vive en /tindershop (GitHub Pages).
+    preview_path: /tindershop/blog/{{slug}}/
     fields:
       - name: title
         label: Título
