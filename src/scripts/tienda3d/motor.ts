@@ -127,6 +127,8 @@ export function iniciarMotor(
   // En pantallas verticales (celular) la cámara va un poco más lejos: el personaje tapa menos.
   let distancia = contenedor.clientWidth / contenedor.clientHeight < 0.8 ? 4.4 : 3.4;
   let distanciaReal = distancia;
+  /** La cámara (tercera persona) quedó metida en el comprador: se lo esconde mientras tanto. */
+  let camaraDentro = false;
   let pausado = false;
   const objetivo = new THREE.Vector3();
   const deseada = new THREE.Vector3();
@@ -757,6 +759,7 @@ export function iniciarMotor(
       // A la altura de los ojos, un poco adelante (que no se vea el cuello por dentro).
       camara.position.set(yo.posicion.x, ALTURA_OJOS, yo.posicion.z).addScaledVector(frenteDe(yaw), yo.primeraPersona ? 0.14 : 0);
       camara.rotation.set(pitch, yaw, 0, 'YXZ');
+      camaraDentro = false; // aplicarModo ya decidió qué se ve del cuerpo
     } else {
       // Por encima del hombro derecho y mirando un poco por delante: se ve el carrito y lo que hay
       // adentro, sin que el cuerpo lo tape.
@@ -777,6 +780,16 @@ export function iniciarMotor(
       camara.position.copy(objetivo).addScaledVector(deseada, distanciaReal);
       camara.position.y = Math.max(0.3, camara.position.y);
       camara.lookAt(objetivo);
+      // Si una pared o un estante empuja la cámara contra el comprador, quedaría dentro de su cabeza o su
+      // cuerpo: en ese momento se lo esconde (como en los juegos) y vuelve a verse al alejarse.
+      const dentro =
+        Math.hypot(camara.position.x - yo.posicion.x, camara.position.z - yo.posicion.z) < 0.5 &&
+        camara.position.y > 0.2 &&
+        camara.position.y < 2.0;
+      if (dentro !== camaraDentro) {
+        camaraDentro = dentro;
+        yo.mostrar(!dentro);
+      }
     }
 
     // Producto frente al comprador (cada 6 cuadros: alcanza y ahorra trabajo).
