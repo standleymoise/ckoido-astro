@@ -6,7 +6,7 @@
 // Cada categoría de WooCommerce elige cómo se exhibe (WordPress → Productos → Categorías):
 //   góndola   estanterías de supermercado (lo de siempre)
 //   perchero  prendas colgadas en percheros
-//   maniqui   conjuntos en maniquíes, al fondo de la tienda
+//   maniqui   conjuntos en maniquíes: los primeros 4 en la vidriera de la entrada, el resto al fondo
 //   estante   prendas dobladas y accesorios, en la pared izquierda
 //   exhibidor pantalla de destacados a la entrada (también los productos «destacados» de WooCommerce)
 import * as THREE from 'three';
@@ -610,15 +610,24 @@ export function construirTienda(
     }
   }
 
-  // ---------- maniquíes (conjuntos), al fondo ----------
+  // ---------- maniquíes (conjuntos) ----------
+  // Los primeros 4 van en la vidriera de la entrada, a los lados de la pantalla, mirando al que entra
+  // (se ven apenas se abre la tienda). Si hay más, siguen en una fila al fondo, detrás de las góndolas.
+  const VIDRIERA_X = [-2.0, 2.0, -3.7, 3.7];
+  const VIDRIERA_Z = 6.4;
+  const enVidriera: Producto3D[] = [];
   if (grupos.maniqui.length) {
     const lista = ordenar(grupos.maniqui).slice(0, 10);
+    const alFondo = lista.slice(VIDRIERA_X.length);
     const matBlanco = new THREE.MeshStandardMaterial({ color: '#f3f3f1', roughness: 0.4 });
     const matPedestal = new THREE.MeshStandardMaterial({ color: '#2b3442', roughness: 0.5 });
-    const paso = Math.min(2.2, 20 / lista.length);
+    const paso = Math.min(2.2, 20 / Math.max(1, alFondo.length));
     lista.forEach((p, i) => {
-      const x = -((lista.length - 1) * paso) / 2 + i * paso;
-      const z = -MEDIO_Z + 1.3;
+      const adelante = i < VIDRIERA_X.length;
+      if (adelante) enVidriera.push(p);
+      const j = i - VIDRIERA_X.length;
+      const x = adelante ? VIDRIERA_X[i] : -((alFondo.length - 1) * paso) / 2 + j * paso;
+      const z = adelante ? VIDRIERA_Z : -MEDIO_Z + 1.3;
       const g = new THREE.Group();
       g.position.set(x, 0, z);
       const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.45, 0.22, 24), matPedestal);
@@ -790,6 +799,21 @@ export function construirTienda(
     }
     return tablero;
   }
+  // Cartel colgado sobre la vidriera con las categorías de los maniquíes (doble faz).
+  if (enVidriera.length) {
+    const nombres = [...new Set(enVidriera.map((p) => p.categoria).filter(Boolean))].sort().join(' · ') || 'Vidriera';
+    // Un maniquí: el cartel justo encima. Más: uno a cada lado de la pantalla.
+    for (const x of enVidriera.length > 1 ? [-2.85, 2.85] : [VIDRIERA_X[0]]) {
+      const s = cartel(nombres, 2.2, 0.5, COLORES.franja, '#ffffff', nombres.length > 22 ? 64 : 84);
+      s.position.set(x, 2.75, VIDRIERA_Z);
+      escena.add(s);
+      const s2 = s.clone();
+      s2.rotation.y = Math.PI;
+      escena.add(s2);
+      colgar(x, VIDRIERA_Z, 3.0, 0.9);
+    }
+  }
+
   CENTROS_PASILLO.forEach((x, i) => {
     const escrito = (pasillos[i] ?? '').trim();
     const texto = escrito || [...categoriasPasillo[i]].sort().join(' · ');
