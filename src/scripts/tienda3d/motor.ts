@@ -879,7 +879,15 @@ export function iniciarMotor(
     irACaja,
     entrarVR,
     vrDisponible,
-    estado: () => ({ pos: yo.posicion.toArray().map((v) => +v.toFixed(2)), yaw: +yaw.toFixed(2), camino: automatico?.puntos.map((v) => [v.x, v.z]) ?? null }),
+    estado: () => ({
+      pos: yo.posicion.toArray().map((v) => +v.toFixed(2)),
+      yaw: +yaw.toFixed(2),
+      camino: automatico?.puntos.map((v) => [v.x, v.z]) ?? null,
+      otros: [...remotos.values()].map((r) => ({
+        persona: [r.p.grupo.position.x, r.p.grupo.position.z, r.p.grupo.rotation.y].map((v) => +v.toFixed(2)),
+        carrito: [r.c.grupo.position.x, r.c.grupo.position.z, r.c.grupo.rotation.y].map((v) => +v.toFixed(2)),
+      })),
+    }),
     irA: (x, z, giro) => {
       yaw = giro;
       yo.rumbo = giro;

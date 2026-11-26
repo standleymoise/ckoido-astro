@@ -32,6 +32,10 @@ function rejilla() {
   }
   const t = new THREE.CanvasTexture(c);
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  // Sin «mipmaps»: con ellos, de lejos o de costado el alambre se promedia con el hueco y la rejilla
+  // desaparece entera (la canasta quedaba invisible y el manubrio parecía suelto).
+  t.generateMipmaps = false;
+  t.minFilter = THREE.LinearFilter;
   return t;
 }
 
@@ -72,12 +76,26 @@ export function crearCarrito(): Carrito3D {
     grupo.add(p);
   }
   // Borde superior y manubrio rojo (a la altura de las manos del comprador).
-  const borde = new THREE.Mesh(new THREE.BoxGeometry(ANCHO + 0.02, 0.025, LARGO + 0.02), metal);
-  borde.position.set(0, BASE + ALTO, ZC);
-  (borde.geometry as THREE.BoxGeometry).computeBoundingBox();
-  const marco = new THREE.LineSegments(new THREE.EdgesGeometry(borde.geometry), new THREE.LineBasicMaterial({ color: '#aeb8c4' }));
-  marco.position.copy(borde.position);
-  grupo.add(marco);
+  // Armazón sólido: borde de arriba y cuatro esquinas de caño. Así la canasta se ve entera desde
+  // cualquier lado (aunque la rejilla se vea fina de lejos) y todo queda unido al manubrio.
+  const cano = (largo: number) => new THREE.CylinderGeometry(0.011, 0.011, largo, 6);
+  for (const [x, z, largo, girar] of [
+    [0, ZC - LARGO / 2, ANCHO, 'z'],
+    [0, ZC + LARGO / 2, ANCHO, 'z'],
+    [-ANCHO / 2, ZC, LARGO, 'x'],
+    [ANCHO / 2, ZC, LARGO, 'x'],
+  ] as const) {
+    const c = new THREE.Mesh(girar === 'z' ? cano(largo).rotateZ(Math.PI / 2) : cano(largo).rotateX(Math.PI / 2), metal);
+    c.position.set(x, BASE + ALTO, z);
+    grupo.add(c);
+  }
+  for (const x of [-ANCHO / 2, ANCHO / 2]) {
+    for (const z of [ZC - LARGO / 2, ZC + LARGO / 2]) {
+      const c = new THREE.Mesh(cano(ALTO), metal);
+      c.position.set(x, BASE + ALTO / 2, z);
+      grupo.add(c);
+    }
+  }
   const manubrio = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, ANCHO + 0.08, 10).rotateZ(Math.PI / 2), rojo);
   manubrio.position.set(0, BASE + ALTO + 0.2, ZC + LARGO / 2 + 0.13); // a la altura de las manos
   grupo.add(manubrio);
