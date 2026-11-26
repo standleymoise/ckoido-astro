@@ -2,25 +2,20 @@
 import Base from '../layouts/Base.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
-import ComoUtilizarlas from '../components/ComoUtilizarlas.astro';
 import BlogCard from '../components/BlogCard.astro';
-import ContactSection from '../components/ContactSection.astro';
 import Hero from '../components/home/Hero.astro';
-import BenefitsBar from '../components/home/BenefitsBar.astro';
-import About from '../components/home/About.astro';
-import FeatureSlider from '../components/home/FeatureSlider.astro';
-import ProductGrid from '../components/home/ProductGrid.astro';
-import Testimonials from '../components/home/Testimonials.astro';
+import ComoFunciona from '../components/home/ComoFunciona.astro';
 import TiendaSwipe from '../components/tienda/TiendaSwipe.astro';
 import { getPosts } from '../data/blog';
+import { marca, rutas } from '../data/sitio';
 import { getProductos, tiendaActiva } from '../data/tienda';
 import { getCollection } from 'astro:content';
 
 // En modo tienda (Hostinger) el inicio es solo la tienda con tarjetas deslizables,
 // a pantalla completa y sin header ni footer;
-// en GitHub Pages sigue siendo el inicio informativo del Figma.
+// en GitHub Pages es una portada sencilla de Tindershop.
 const productos = await getProductos();
-const posts = tiendaActiva ? [] : (await getPosts()).slice(0, 4);
+const posts = tiendaActiva ? [] : (await getPosts()).slice(0, 3);
 // Opiniones de clientes (WordPress: CPT UI «testimonios» + ACF): van mezcladas en el mazo.
 const testimonios = tiendaActiva ? await getCollection('testimonios') : [];
 // Banners (WordPress: CPT UI «banners» + ACF): tarjetas de promoción dentro del mazo.
@@ -32,19 +27,19 @@ const jsonLd = {
   '@graph': [
     {
       '@type': tiendaActiva ? 'OnlineStore' : 'Organization',
-      name: 'CK Oído',
+      name: marca.nombre,
       url: sitio,
-      logo: new URL('img/logo-ck.svg', sitio).href,
-      description: 'Gotas de uso tópico que secan el agua atrapada en el oído y ayudan a prevenir infecciones del oído externo.',
-      parentOrganization: { '@type': 'Organization', name: 'Roleisa Farmacéutica' },
+      logo: new URL('img/logo-tindershop.svg', sitio).href,
+      description: marca.descripcion,
+      slogan: marca.lema,
     },
-    { '@type': 'WebSite', name: 'CK Oído', url: sitio, inLanguage: 'es-CR' },
+    { '@type': 'WebSite', name: marca.nombre, url: sitio, inLanguage: 'es-CR' },
   ],
 };
 ---
 <Base
-  title={tiendaActiva ? 'Tienda CK Oído | Gotas para los oídos' : 'CK Oído | Gotas para prevenir infecciones en los oídos'}
-  description="CK Oído: gotas de uso tópico que secan el agua atrapada en el oído después de nadar o bañarse y ayudan a prevenir infecciones del oído externo."
+  title={tiendaActiva ? `${marca.nombre} | ${marca.lema}` : `${marca.nombre} | La tienda en la que se compra deslizando`}
+  description={marca.descripcion}
   jsonLd={jsonLd}
 >
   {tiendaActiva ? (
@@ -54,23 +49,27 @@ const jsonLd = {
   <Header />
   <main>
     <Hero />
-    <BenefitsBar />
-    <About />
-    <FeatureSlider />
-    <ProductGrid />
-    <ComoUtilizarlas />
-    <Testimonials />
+    <ComoFunciona />
 
-    <section class="blog container" aria-labelledby="blog-titulo">
-      <h2 id="blog-titulo">Nuestro Blog</h2>
-      <ul class="blog-lista">
-        {posts.map((post) => (
-          <li><BlogCard post={post} /></li>
-        ))}
-      </ul>
+    {posts.length > 0 && (
+      <section class="blog container" aria-labelledby="blog-titulo">
+        <div class="blog-cabeza">
+          <h2 id="blog-titulo">Del blog</h2>
+          <a href={rutas.blog}>Ver todos</a>
+        </div>
+        <ul class="blog-lista">
+          {posts.map((post) => (
+            <li><BlogCard post={post} /></li>
+          ))}
+        </ul>
+      </section>
+    )}
+
+    <section class="cierre container" aria-labelledby="cierre-titulo">
+      <h2 id="cierre-titulo">¿Listo para empezar?</h2>
+      <p>Abra la tienda y deslice: lo que le guste, a la derecha.</p>
+      <a class="btn" href={rutas.tienda}>Ver productos</a>
     </section>
-
-    <ContactSection />
   </main>
   <Footer />
   </>
@@ -78,24 +77,34 @@ const jsonLd = {
 </Base>
 
 <style>
-  /* Título a 147px de la banda gris; 4 tarjetas de 400px (Figma 1920) */
   .blog {
-    padding-top: clamp(56px, 7.65vw, 147px);
+    padding-top: clamp(24px, 3vw, 56px);
     padding-bottom: clamp(16px, 3.3vw, 64px);
   }
-
-  .blog h2 {
+  .blog-cabeza {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px 24px;
+  }
+  .blog h2,
+  .cierre h2 {
     margin: 0;
     font-weight: 700;
     font-size: clamp(28px, 2.08vw, 40px);
     line-height: 1.21;
     color: var(--azul-900);
   }
+  .blog-cabeza a {
+    font-weight: 600;
+    color: var(--rojo);
+  }
 
   .blog-lista {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: clamp(20px, 1.18vw, 22.6px);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: clamp(20px, 2vw, 40px);
     margin: clamp(28px, 3.2vw, 61px) 0 0;
     padding: 0;
     list-style: none;
@@ -103,6 +112,17 @@ const jsonLd = {
   .blog-lista li {
     display: flex;
     flex-direction: column;
+  }
+
+  .cierre {
+    padding-block: clamp(48px, 5vw, 96px);
+    text-align: center;
+  }
+  .cierre p {
+    margin: 12px 0 clamp(20px, 1.6vw, 30px);
+    font-size: 17px;
+    line-height: 1.6;
+    color: var(--texto);
   }
 
   @media (max-width: 1100px) {

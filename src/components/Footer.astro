@@ -1,6 +1,6 @@
 ---
 import Logo from './Logo.astro';
-import { menuFooter, redes } from '../data/sitio';
+import { menuFooter, redes, marca } from '../data/sitio';
 
 const year = new Date().getFullYear();
 ---
@@ -19,12 +19,9 @@ const year = new Date().getFullYear();
 
     <div class="abajo">
       <div class="legal">
-        <p>© {year} ckoido.com. All rights reserved.</p>
-        <p><button class="instalar-pie" type="button" data-instalar-app hidden>Instalar la app de CK Oído</button></p>
-        <p>
-          CK Oído respeta y apoya el criterio médico. CK Oído no sustituye ningún tratamiento médico preestablecido,
-          consulte con su médico antes de utilizar el producto.
-        </p>
+        <p>© {year} {marca.nombre}. Todos los derechos reservados.</p>
+        <p><button class="instalar-pie" type="button" data-instalar-app hidden>Instalar la app de {marca.nombre}</button></p>
+        <p>{marca.lema}: derecha para el carrito, arriba para favoritos, izquierda para pasar.</p>
       </div>
       <ul class="redes">
         {redes.map((r) => (

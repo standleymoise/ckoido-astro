@@ -2,9 +2,9 @@
 // «Comprar ahora» de una ficha de producto.
 // Con la tienda activa muestra el precio de WooCommerce y
 // «Comprar ahora» abre la tienda del inicio con ese producto primero. Si no hay tienda
-// (o el SKU no existe en ella), lleva a «Dónde comprar» como siempre.
+// (o el SKU no existe en ella), lleva a la lista de productos (comprarHref).
 import { getProducto } from '../data/tienda';
-import { rutas, comprarProducto } from '../data/sitio';
+import { comprarHref, comprarProducto } from '../data/sitio';
 
 interface Props {
   /** SKU del producto en WooCommerce. */
@@ -24,7 +24,7 @@ const producto = await getProducto(Astro.props.sku);
     )}
   </div>
 ) : (
-  <a class="btn" href={rutas.dondeComprar}>Comprar ahora</a>
+  <a class="btn" href={comprarHref}>Comprar ahora</a>
 )}
 
 <style>

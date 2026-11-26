@@ -1,6 +1,7 @@
 ---
 import Logo from './Logo.astro';
-import { menu, redes, farmacias, telHref, isActive, comprarHref } from '../data/sitio';
+import { menu, redes, rutas, marca, isActive, comprarHref } from '../data/sitio';
+import { tiendaActiva } from '../data/tienda';
 
 const current = Astro.url.pathname;
 ---
@@ -23,13 +24,15 @@ const current = Astro.url.pathname;
       <Logo size={184} />
     </div>
 
-    <ul class="farmacias">
-      {farmacias.map((f) => (
-        <li>
-          <span class="farmacia-nombre">{f.nombre}:</span>
-          <a class="farmacia-tel" href={telHref(f.telefono)}>{f.telefono}</a>
-        </li>
-      ))}
+    <ul class="atajos">
+      {tiendaActiva ? (
+        <>
+          <li><a class="atajo" href={rutas.favoritos}>Mis favoritos</a></li>
+          <li><a class="atajo" href={rutas.cuenta}>Mi cuenta</a></li>
+        </>
+      ) : (
+        <li><span class="atajo-lema">{marca.lema}</span></li>
+      )}
     </ul>
 
     <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="menu-principal">
@@ -98,7 +101,7 @@ const current = Astro.url.pathname;
     justify-self: center;
   }
 
-  .farmacias {
+  .atajos {
     justify-self: end;
     margin: 0;
     padding: 0;
@@ -106,19 +109,12 @@ const current = Astro.url.pathname;
     display: grid;
     gap: 2px;
   }
-  .farmacias li {
+  .atajos li {
     display: flex;
     justify-content: flex-end;
-    align-items: baseline;
-    gap: 6px;
   }
-  .farmacia-nombre {
-    font-family: var(--font-alt);
-    font-weight: 500;
-    font-size: 12.3px;
-    color: var(--azul-800);
-  }
-  .farmacia-tel {
+  .atajo,
+  .atajo-lema {
     font-family: var(--font-alt);
     font-weight: 800;
     font-size: 15.4px;
@@ -126,7 +122,10 @@ const current = Astro.url.pathname;
     text-decoration: none;
     white-space: nowrap;
   }
-  .farmacia-tel:hover {
+  .atajo-lema {
+    color: var(--rojo);
+  }
+  .atajo:hover {
     text-decoration: underline;
   }
 
@@ -185,7 +184,7 @@ const current = Astro.url.pathname;
     background: #d11a43;
   }
 
-  /* Tablet: ocultamos datos de farmacias del topbar para dar aire */
+  /* Tablet: menú más compacto */
   @media (max-width: 1180px) {
     .nav-links a {
       font-size: 14px;
@@ -205,7 +204,7 @@ const current = Astro.url.pathname;
       justify-self: start;
       grid-column: 1;
     }
-    .farmacias {
+    .atajos {
       grid-column: 2;
     }
     .menu-toggle {
@@ -267,7 +266,7 @@ const current = Astro.url.pathname;
   }
 
   @media (max-width: 560px) {
-    .farmacias {
+    .atajos {
       display: none;
     }
   }

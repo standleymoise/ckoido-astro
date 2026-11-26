@@ -1,43 +1,28 @@
 ---
-import { url } from '../data/sitio';
-// Logo CK Oído armado con las 3 piezas vectoriales del Figma (CK + gota + ído).
+import { url, marca } from '../data/sitio';
+// Logo de Tindershop (public/img/logo-tindershop.svg): dos tarjetas del swipe con una bolsa y la
+// palabra en trazos (no depende de la fuente). Proporción 270 × 56.
 interface Props {
-  /** Ancho total del logo en px (header: 184, footer: 232). */
+  /** Ancho del logo en px (cabecera: 184, pie: 232). */
   size?: number;
   href?: string;
 }
 const { size = 184, href = url('/') } = Astro.props;
 ---
-<a class="logo" href={href} style={`--u:${+(size / 184).toFixed(4)}`} aria-label="CK Oído, inicio">
-  <img src={url("/img/logo-ck.svg")} alt="" class="ck" width="66" height="36" />
-  <img src={url("/img/logo-gota.svg")} alt="" class="gota" width="39" height="59" />
-  <img src={url("/img/logo-ido.svg")} alt="" class="ido" width="68" height="38" />
+<a class="logo" href={href} style={`--u:${+(size / 184).toFixed(4)}`} aria-label={`${marca.nombre}, inicio`}>
+  <img src={url('/img/logo-tindershop.svg')} alt="" width="270" height="56" />
 </a>
 
 <style>
-  /* Proporciones medidas en el Figma sobre un logo de 184px de ancho.
-     --u (escala) llega como número desde el atributo style: en CSS, calc(232px / 184) da una
-     medida y no un número, y calc(66px * <medida>) es inválido (el logo quedaba siempre igual). */
+  /* --u es la escala (1 = 184 px de ancho). Las páginas pueden cambiarla, p. ej. en el celular. */
   .logo {
     --u: 1;
     display: inline-flex;
-    align-items: flex-end;
+    align-items: center;
     text-decoration: none;
-    padding-bottom: calc(7px * var(--u));
   }
-  .ck {
-    width: calc(66.12px * var(--u));
+  .logo img {
+    width: calc(184px * var(--u));
     height: auto;
-  }
-  .gota {
-    width: calc(38.86px * var(--u));
-    height: auto;
-    margin-left: calc(3.5px * var(--u));
-    margin-bottom: calc(-7px * var(--u));
-  }
-  .ido {
-    width: calc(68.32px * var(--u));
-    height: auto;
-    margin-left: calc(7.3px * var(--u));
   }
 </style>

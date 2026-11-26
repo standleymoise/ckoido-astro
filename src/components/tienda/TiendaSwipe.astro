@@ -14,7 +14,7 @@
 import { Image } from 'astro:assets';
 import type { CollectionEntry } from 'astro:content';
 import Logo from '../Logo.astro';
-import { rutas } from '../../data/sitio';
+import { rutas, marca } from '../../data/sitio';
 import type { Producto } from '../../data/tienda';
 import { storeApiUrl, tiendaUrl } from '../../data/tienda';
 
@@ -170,8 +170,8 @@ const provincias = [
       <span class="iniciales" data-iniciales hidden></span>
       <span class="sr-only">Mi cuenta</span>
     </a>
-    <Logo size={118} />
-    <h1 id="tienda-titulo" class="sr-only">Tienda CK Oído</h1>
+    <Logo size={156} />
+    <h1 id="tienda-titulo" class="sr-only">{marca.nombre}</h1>
     <div class="cabecera-botones">
     <a class="btn-carrito btn-favs" href={rutas.favoritos}>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" /></svg>
@@ -2000,7 +2000,7 @@ const provincias = [
     /* Logo más chico en el celular para que no choque con favoritos y carrito
        (--u es la escala de Logo.astro: 1 = 184 px). */
     .cabecera :global(.logo) {
-      --u: 0.6 !important;
+      --u: 0.72 !important;
     }
     .cabecera-botones {
       gap: 6px;
@@ -2024,7 +2024,7 @@ const provincias = [
   }
   @media (max-width: 360px) {
     .cabecera :global(.logo) {
-      --u: 0.54 !important;
+      --u: 0.64 !important;
     }
     .cabecera .btn-carrito {
       width: 40px;

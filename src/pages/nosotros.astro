@@ -4,15 +4,15 @@ import Header from '../components/Header.astro';
 import PageTitle from '../components/PageTitle.astro';
 import SplitSection from '../components/SplitSection.astro';
 import PromoBanner from '../components/PromoBanner.astro';
-import Farmacias from '../components/nosotros/Farmacias.astro';
+import ComoFunciona from '../components/home/ComoFunciona.astro';
 import Newsletter from '../components/Newsletter.astro';
 import Footer from '../components/Footer.astro';
-import { comprarHref } from '../data/sitio';
-import fotoMujer from '../assets/nosotros/mujer-gotero.png';
+import { comprarHref, marca } from '../data/sitio';
+import foto from '../assets/blog/piscina.png';
 ---
 <Base
-  title="Nosotros | CK Oído"
-  description="CK Oído es fabricado por Roleisa Farmacéutica, empresa 100% costarricense. Conozca dónde comprar CK Oído."
+  title={`Nosotros | ${marca.nombre}`}
+  description={`${marca.nombre} es una tienda en línea de Costa Rica en la que se compra deslizando tarjetas: rápido, simple y desde el celular.`}
 >
   <Header />
   <main>
@@ -20,34 +20,34 @@ import fotoMujer from '../assets/nosotros/mujer-gotero.png';
 
     <SplitSection
       id="acerca"
-      image={fotoMujer}
-      alt="Mujer sonriente aplicándose gotas en el oído con un gotero"
-      title="Acerca de Nosotros"
+      image={foto}
+      alt="Mujer sonriente descansando en el borde de una piscina"
+      title={`Acerca de ${marca.nombre}`}
       ratio="748 / 470"
       priority
     >
       <p>
-        CK Oído es fabricado por Roleisa Farmacéutica, empresa 100% costarricense con más de 7 años de experiencia
-        en la producción de medicamentos y cosméticos dedicados al cuidado de toda la familia. Contamos con variedad
-        de productos para satisfacer las necesidades del cliente.
+        {marca.nombre} nació de una idea simple: comprar en línea debería ser tan fácil como pasar fotos en el
+        celular. En lugar de filtros, menús y páginas eternas, le mostramos un producto a la vez en una tarjeta.
       </p>
       <p>
-        Con innovación y experiencia desarrollamos productos con altos estándares de calidad y eficacia para el
-        mercado costarricense; así como también productos para exportación.
+        Usted decide con un gesto: lo que le gusta va al carrito, lo que no, se queda atrás, y lo que quiere pensar
+        con calma lo guarda en favoritos. Así encuentra lo que busca en pocos minutos.
       </p>
-      <a class="btn" href={comprarHref}>Comprar ahora</a>
+      <a class="btn" href={comprarHref}>Empezar a deslizar</a>
     </SplitSection>
 
+    <ComoFunciona title="Comprar con un gesto" />
+
     <PromoBanner />
-    <Farmacias />
     <Newsletter />
   </main>
   <Footer />
 </Base>
 
 <style>
-  /* El Figma recorta la foto por abajo: mantener la cara visible. */
+  /* Foto vertical recortada a lo ancho: mantener la cara visible. */
   :global(#acerca .foto img) {
-    object-position: 50% 0;
+    object-position: 50% 58%;
   }
 </style>

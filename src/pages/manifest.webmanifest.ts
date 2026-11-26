@@ -17,7 +17,7 @@ export const GET: APIRoute = () => {
     orientation: 'portrait',
     background_color: app.fondo,
     theme_color: app.tema,
-    categories: tiendaActiva ? ['shopping', 'health'] : ['health'],
+    categories: ['shopping'],
     icons: [
       { src: url('/iconos/icono-192.png'), sizes: '192x192', type: 'image/png' },
       { src: url('/iconos/icono-512.png'), sizes: '512x512', type: 'image/png' },
@@ -30,8 +30,8 @@ export const GET: APIRoute = () => {
           { name: 'Todos los productos', url: rutas.tienda },
         ]
       : [
-          { name: 'Nuestro producto', url: rutas.producto },
-          { name: 'Dónde comprar', url: rutas.dondeComprar },
+          { name: 'Productos', url: rutas.tienda },
+          { name: 'Blog', url: rutas.blog },
         ],
   };
   return new Response(JSON.stringify(manifiesto, null, 2), {

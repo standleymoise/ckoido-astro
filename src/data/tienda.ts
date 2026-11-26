@@ -117,7 +117,7 @@ export function getProductos(): Promise<Producto[]> {
 /** Base de la Store API, para el carrito y el checkout desde el navegador. */
 export const storeApiUrl = tiendaActiva ? `${tiendaUrl}/wp-json/wc/store/v1` : '';
 
-/** Producto por SKU (los SKU de WooCommerce: ck-oido, ck-oido-suave, sincerax). */
+/** Producto por SKU de WooCommerce. */
 export async function getProducto(sku: string) {
   return (await getProductos()).find((p) => p.sku === sku);
 }

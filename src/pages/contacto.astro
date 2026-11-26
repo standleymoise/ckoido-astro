@@ -4,10 +4,11 @@ import Header from '../components/Header.astro';
 import PageTitle from '../components/PageTitle.astro';
 import ContactSection from '../components/ContactSection.astro';
 import Footer from '../components/Footer.astro';
+import { marca } from '../data/sitio';
 ---
 <Base
-  title="Contacto | CK Oído"
-  description="Contáctenos: escríbanos o llame a Farmacia Santa Lucia o Farmacia Sucre para más información sobre CK Oído."
+  title={`Contacto | ${marca.nombre}`}
+  description={`Escríbanos: el equipo de ${marca.nombre} le ayuda con pedidos, productos y dudas sobre la tienda.`}
 >
   <Header />
   <main>

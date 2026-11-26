@@ -5,7 +5,7 @@
 import Base from '../layouts/Base.astro';
 import Logo from '../components/Logo.astro';
 import { getProductos, storeApiUrl, tiendaActiva } from '../data/tienda';
-import { rutas } from '../data/sitio';
+import { rutas, marca } from '../data/sitio';
 
 export function getStaticPaths() {
   return tiendaActiva ? [{ params: { favoritos: 'favoritos' } }] : [];
@@ -23,14 +23,14 @@ const iniciales = (await getProductos()).map((p) => ({
   alt: p.imagen?.alt ?? p.nombre,
 }));
 ---
-<Base title="Mis favoritos | Tienda CK Oído" description="Los productos de CK Oído que guardó como favoritos." noindex>
+<Base title={`Mis favoritos | ${marca.nombre}`} description="Los productos que guardó como favoritos." noindex>
   <main class="favs" data-api={storeApiUrl} data-inicio={rutas.inicio}>
     <header class="cabecera">
       <a class="volver" href={rutas.inicio}>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
         <span class="volver-texto">Tienda</span>
       </a>
-      <Logo size={96} />
+      <Logo size={132} />
       <a class="btn-redondo" href={`${rutas.inicio}#carrito`}>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.4 10.2a1.5 1.5 0 0 0 1.5 1.1h8.6a1.5 1.5 0 0 0 1.4-1.1L21 8H6.2" /><circle cx="9.5" cy="19.5" r="1.4" /><circle cx="17" cy="19.5" r="1.4" /></svg>
         <span class="sr-only">Ver carrito</span>

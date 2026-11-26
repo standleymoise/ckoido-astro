@@ -1,143 +1,123 @@
 ---
-import { Image } from 'astro:assets';
-import { comprarHref } from '../../data/sitio';
-import fondo from '../../assets/home/hero-fondo.jpg';
+// Portada del inicio informativo (sin tienda): logo, lema, descripción y acceso a los productos.
+import { marca, rutas, url } from '../../data/sitio';
 ---
 <section class="hero" aria-labelledby="hero-titulo">
-  <Image
-    class="fondo"
-    src={fondo}
-    alt=""
-    format="webp"
-    widths={[768, 1280, 1920, 2129]}
-    sizes="100vw"
-    loading="eager"
-    fetchpriority="high"
-  />
-  <div class="capa" aria-hidden="true"></div>
-
   <div class="contenido container">
-    <p class="kicker">Cuidado que se siente</p>
-    <h1 id="hero-titulo">
-      <strong>Productos número #1 para prevenir</strong>
-      <span>infecciones en los oídos</span>
-    </h1>
-    <ul class="puntos">
-      <li>Soluciones tópicas diseñadas para el cuidado e higiene natural del oído</li>
-      <li>Elimina la humedad atrapada en el oído después de nadar, bañarte o hacer algún deporte acuático</li>
-    </ul>
-    <a class="btn" href={comprarHref}>Comprar ahora</a>
-    <p class="sr-only">Caja y frasco de gotas CK Oído uso tópico de 15 ml sobre una base de mármol junto al mar.</p>
+    <img class="logo" src={url('/img/logo-tindershop.svg')} alt={marca.nombre} width="270" height="56" />
+    <h1 id="hero-titulo">{marca.lema}</h1>
+    <p class="descripcion">{marca.descripcion}</p>
+    <div class="acciones">
+      <a class="btn" href={rutas.tienda}>Ver productos</a>
+      <a class="secundario" href="#como-funciona">¿Cómo funciona?</a>
+    </div>
+  </div>
+
+  <div class="tarjetas" aria-hidden="true">
+    <span class="carta c1"></span>
+    <span class="carta c2"></span>
+    <span class="carta c3">
+      <span class="sello">♥</span>
+    </span>
   </div>
 </section>
 
 <style>
-  /* Medidas del Figma (1920px): banda de 665px con esquinas inferiores de 100px */
   .hero {
     position: relative;
     isolation: isolate;
     overflow: hidden;
-    border-radius: 0 0 clamp(40px, 5.2vw, 100px) clamp(40px, 5.2vw, 100px);
-    min-height: clamp(520px, 34.64vw, 665px);
     display: flex;
-  }
-
-  .fondo {
-    position: absolute;
-    inset: 0;
-    z-index: -2;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: 70% center;
-  }
-
-  .capa {
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    background: linear-gradient(72.66deg, rgba(255, 255, 255, 0.76) 43.38%, rgba(255, 255, 255, 0) 65.41%);
+    align-items: center;
+    min-height: clamp(440px, 30vw, 600px);
+    border-radius: 0 0 clamp(40px, 5.2vw, 100px) clamp(40px, 5.2vw, 100px);
+    background: linear-gradient(0deg, var(--celeste), var(--blanco-76)), #eef5fd;
   }
 
   .contenido {
-    /* 125px de aire arriba; abajo dejamos sitio a la barra de beneficios (64px solapados) */
-    padding-block: clamp(48px, 6.5vw, 125px) clamp(120px, 9.8vw, 188px);
-  }
-
-  .kicker {
-    display: inline-block;
-    margin: 0 0 clamp(12px, 0.8vw, 15px);
-    padding-bottom: 1px;
-    border-bottom: 1px solid var(--rojo);
-    font-weight: 500;
-    font-size: clamp(16px, 1.04vw, 20px);
-    line-height: 1.602;
-    color: #094d8e;
-  }
-
-  h1 {
-    margin: 0;
-    max-width: 760px;
-    font-size: clamp(28px, 2.14vw, 41px);
-    line-height: 1.2;
-    color: #085294;
-  }
-  h1 strong {
-    display: block;
-    font-weight: 800;
-  }
-  h1 span {
-    display: block;
-    font-weight: 500;
-  }
-
-  .puntos {
-    margin: clamp(16px, 1.05vw, 20px) 0 0;
-    padding: 0;
-    list-style: none;
-    display: grid;
-    gap: clamp(12px, 1.4vw, 27px);
-    max-width: 630px;
-  }
-  .puntos li {
     position: relative;
-    padding-left: 33px;
-    font-weight: 500;
-    font-size: clamp(16px, 0.94vw, 18px);
-    line-height: 1.21;
-    color: #085294;
+    z-index: 1;
+    padding-block: clamp(48px, 6vw, 120px);
   }
-  .puntos li::before {
-    content: '';
+  .logo {
+    display: block;
+    width: clamp(200px, 16vw, 300px);
+    height: auto;
+  }
+  h1 {
+    margin: clamp(20px, 1.8vw, 34px) 0 0;
+    max-width: 760px;
+    font-weight: 800;
+    font-size: clamp(32px, 3vw, 58px);
+    line-height: 1.1;
+    color: var(--azul-900);
+  }
+  .descripcion {
+    margin: clamp(14px, 1.1vw, 22px) 0 0;
+    max-width: 600px;
+    font-weight: 500;
+    font-size: clamp(16px, 1.05vw, 20px);
+    line-height: 1.5;
+    color: var(--texto);
+  }
+  .acciones {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px 28px;
+    margin-top: clamp(24px, 2.1vw, 40px);
+  }
+  .secundario {
+    font-weight: 600;
+    color: var(--azul-900);
+  }
+
+  /* Pila de tarjetas decorativa, como el mazo de la tienda */
+  .tarjetas {
     position: absolute;
-    left: 2px;
-    top: 0.35em;
-    width: 11px;
-    height: 11px;
+    right: clamp(24px, 9vw, 200px);
+    top: 50%;
+    width: clamp(180px, 17vw, 330px);
+    aspect-ratio: 3 / 4;
+    transform: translateY(-50%);
+  }
+  .carta {
+    position: absolute;
+    inset: 0;
+    border-radius: 24px;
+    box-shadow: 0 18px 40px rgba(10, 67, 131, 0.18);
+  }
+  .c1 {
+    background: var(--azul-600);
+    transform: rotate(-12deg) translateX(-18%);
+    opacity: 0.55;
+  }
+  .c2 {
+    background: var(--azul-900);
+    transform: rotate(-5deg) translateX(-8%);
+    opacity: 0.8;
+  }
+  .c3 {
+    display: grid;
+    place-items: center;
+    background: linear-gradient(160deg, #fff, #e1eeff);
+    border: 1px solid var(--borde);
+    transform: rotate(6deg);
+  }
+  .sello {
+    display: grid;
+    place-items: center;
+    width: 38%;
+    aspect-ratio: 1;
     border-radius: 50%;
     background: var(--rojo);
+    color: #fff;
+    font-size: clamp(36px, 3.4vw, 64px);
+    line-height: 1;
   }
 
-  .btn {
-    margin-top: clamp(28px, 2.1vw, 40px);
-  }
-
-  /* Móvil: el texto arriba y la foto (con el frasco) visible debajo */
-  @media (max-width: 760px) {
-    .hero {
-      flex-direction: column;
-      min-height: 0;
-      background: #eef5fd;
-    }
-    .fondo {
-      position: relative;
-      inset: auto;
-      z-index: 0;
-      order: 2;
-      height: 300px;
-      object-position: 72% 40%;
-    }
-    .capa {
+  @media (max-width: 900px) {
+    .tarjetas {
       display: none;
     }
   }

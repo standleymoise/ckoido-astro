@@ -3,7 +3,7 @@ import { defineConfig, fontProviders } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
 
 // GitHub Pages publica el sitio en https://standleymoise.github.io/ckoido-astro/.
-// Con un dominio propio: SITE_URL=https://ckoido.com BASE_PATH=/ (variables de entorno del build).
+// Con un dominio propio: SITE_URL=https://taxlockedwallet.com BASE_PATH=/ (variables de entorno del build).
 // https://astro.build/config
 export default defineConfig({
   site: process.env.SITE_URL ?? 'https://standleymoise.github.io',

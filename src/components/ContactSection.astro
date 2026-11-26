@@ -1,29 +1,31 @@
 ---
-// Tarjeta de contacto (Figma: Frame 7 «Contacto» y final de Inicio).
+// Tarjeta de contacto: texto, dirección y redes a la izquierda; formulario a la derecha.
 // El formulario envía a Formspree (ver src/data/formularios.ts y .env.example).
-import { farmacias, direccion, telHref, url } from '../data/sitio';
+import { direccion, marca, redes, url } from '../data/sitio';
 import { formspree } from '../data/formularios';
 ---
 <section class="contacto container" aria-labelledby="contacto-titulo">
   <div class="card">
     <div class="info">
-      <h2 id="contacto-titulo">Estamos aquí para escucharte</h2>
-      <p>¿Tienes alguna pregunta o necesitas más información?</p>
-      <p>Nuestro equipo está listo para ayudarte y brindarte la atención que necesitas. Contáctanos y hablemos.</p>
+      <h2 id="contacto-titulo">Estamos aquí para escucharle</h2>
+      <p>¿Tiene una pregunta sobre un pedido, un producto o cómo usar la tienda?</p>
+      <p>Escríbanos con el formulario o por nuestras redes y el equipo de {marca.nombre} le responderá lo antes posible.</p>
 
       <ul class="datos">
-        {farmacias.map((f) => (
-          <li>
-            <img src={url("/img/contacto/icono-telefono.svg")} alt="" width="38" height="38" />
-            <span>
-              {f.nombre}: <a href={telHref(f.telefono)}>{f.telefono}</a>
-            </span>
-          </li>
-        ))}
         <li>
           <img src={url("/img/contacto/icono-ubicacion.svg")} alt="" width="38" height="38" />
           <span>{direccion}</span>
         </li>
+      </ul>
+
+      <ul class="redes" aria-label="Redes sociales">
+        {redes.map((r) => (
+          <li>
+            <a href={r.href} aria-label={r.label}>
+              <img src={r.icon} alt="" width="38" height="38" />
+            </a>
+          </li>
+        ))}
       </ul>
     </div>
 
@@ -35,21 +37,21 @@ import { formspree } from '../data/formularios';
       data-formspree
       data-ok="¡Gracias por escribirnos! Le responderemos pronto."
     >
-      <input type="hidden" name="_subject" value="Nuevo mensaje desde ckoido.com" />
+      <input type="hidden" name="_subject" value={`Nuevo mensaje desde ${marca.dominio}`} />
       <input type="hidden" name="formulario" value="Contacto" />
       <!-- Trampa anti-spam de Formspree: los humanos no la ven ni la llenan -->
       <input type="text" name="_gotcha" tabindex="-1" autocomplete="off" class="trampa" aria-hidden="true" />
       <div class="campo">
         <label for="contacto-nombre">Nombre</label>
-        <input id="contacto-nombre" name="nombre" type="text" required autocomplete="given-name" placeholder="Ingresa tu nombre" />
+        <input id="contacto-nombre" name="nombre" type="text" required autocomplete="given-name" placeholder="Ingrese su nombre" />
       </div>
       <div class="campo">
         <label for="contacto-apellidos">Apellidos</label>
-        <input id="contacto-apellidos" name="apellidos" type="text" autocomplete="family-name" placeholder="Ingresa tus apellidos" />
+        <input id="contacto-apellidos" name="apellidos" type="text" autocomplete="family-name" placeholder="Ingrese sus apellidos" />
       </div>
       <div class="campo">
         <label for="contacto-email">Correo electrónico</label>
-        <input id="contacto-email" name="email" type="email" required autocomplete="email" placeholder="Ingresa tu correo electrónico" />
+        <input id="contacto-email" name="email" type="email" required autocomplete="email" placeholder="Ingrese su correo electrónico" />
       </div>
       <div class="campo">
         <label for="contacto-telefono">Número de teléfono</label>
@@ -57,7 +59,7 @@ import { formspree } from '../data/formularios';
       </div>
       <div class="campo ancho">
         <label for="contacto-mensaje">Mensaje</label>
-        <textarea id="contacto-mensaje" name="mensaje" rows="5" required placeholder="Escríbenos tu mensaje"></textarea>
+        <textarea id="contacto-mensaje" name="mensaje" rows="5" required placeholder="Escríbanos su mensaje"></textarea>
       </div>
       <button type="submit">Enviar ahora</button>
     </form>
@@ -157,6 +159,26 @@ import { formspree } from '../data/formularios';
   }
   .datos a:hover {
     text-decoration: underline;
+  }
+  .redes {
+    list-style: none;
+    margin: 24px 0 0;
+    padding: 0;
+    display: flex;
+    gap: 14px;
+  }
+  .redes a {
+    display: block;
+    border-radius: 50%;
+    transition: opacity 0.2s;
+  }
+  .redes a:hover {
+    opacity: 0.8;
+  }
+  .redes img {
+    display: block;
+    width: 38px;
+    height: 38px;
   }
 
   /* Formulario */

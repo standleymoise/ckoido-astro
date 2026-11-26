@@ -31,7 +31,12 @@ function serviceWorker(CACHE: string, PREFIJO: string, BASE: string) {
       caches
         .keys()
         .then((claves) =>
-          Promise.all(claves.filter((k) => k.startsWith(PREFIJO) && k !== CACHE).map((k) => caches.delete(k))),
+          // También las del nombre anterior del sitio («ckoido-app-…»).
+          Promise.all(
+            claves
+              .filter((k) => (k.startsWith(PREFIJO) || k.startsWith('ckoido-app-')) && k !== CACHE)
+              .map((k) => caches.delete(k)),
+          ),
         )
         .then(() => sw.clients.claim()),
     );

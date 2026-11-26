@@ -1,10 +1,10 @@
 ---
 // Página /cuenta (solo en modo tienda): entrar, crear cuenta, recuperar contraseña y «Mi cuenta»
-// (perfil, pedidos y datos de entrega). Habla con el plugin wordpress/mu-plugins/ckoido-cuenta.php.
+// (perfil, pedidos y datos de entrega). Habla con el plugin wordpress/mu-plugins/tindershop-cuenta.php.
 import Base from '../layouts/Base.astro';
 import Logo from '../components/Logo.astro';
 import { storeApiUrl, tiendaActiva } from '../data/tienda';
-import { rutas } from '../data/sitio';
+import { rutas, marca } from '../data/sitio';
 
 export function getStaticPaths() {
   return tiendaActiva ? [{ params: { cuenta: 'cuenta' } }] : [];
@@ -20,13 +20,13 @@ const provincias = [
   ['CR-L', 'Limón'],
 ];
 ---
-<Base title="Mi cuenta | Tienda CK Oído" description="Inicie sesión o cree su cuenta en la tienda de CK Oído." noindex>
+<Base title={`Mi cuenta | ${marca.nombre}`} description={`Inicie sesión o cree su cuenta en ${marca.nombre}.`} noindex>
   <main class="cuenta" data-api={storeApiUrl} data-inicio={rutas.inicio} data-estado="cargando">
     <header class="cabecera">
       <a class="redondo" href={rutas.inicio} aria-label="Volver a la tienda">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
       </a>
-      <Logo size={96} />
+      <Logo size={132} />
       <a class="redondo favs" href={rutas.favoritos} aria-label="Mis favoritos">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" /></svg>
       </a>

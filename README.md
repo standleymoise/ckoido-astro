@@ -1,6 +1,6 @@
 # CK Oído — sitio web (Astro)
 
-Sitio de CK Oído construido con [Astro](https://astro.build) a partir del diseño en Figma «CKOIDO».
+**Tindershop**: tienda en la que se compra deslizando tarjetas, construida con [Astro](https://astro.build) y WooCommerce (Store API). El repositorio conserva su nombre anterior (`ckoido-astro`) porque de él dependen el despliegue de Hostinger y la vista previa de GitHub Pages.
 
 **Sitio publicado:** https://standleymoise.github.io/ckoido-astro/
 
@@ -36,7 +36,7 @@ El mismo código se publica también en modo tienda:
   El cliente de la Store API compartido está en `src/scripts/tienda-api.ts`.
 - **`/cuenta`**: iniciar sesión, crear cuenta, recuperar contraseña y «Mi cuenta» (avatar con
   iniciales, pedidos con su estado y datos de entrega editables). Usa el plugin
-  `wordpress/mu-plugins/ckoido-cuenta.php` (token propio `X-CKOido-Token`, 30 días). Con sesión,
+  `wordpress/mu-plugins/tindershop-cuenta.php` (token propio `X-Tindershop-Token`, 30 días). Con sesión,
   la barra de la tienda muestra las iniciales, el checkout se llena solo y el pedido queda en la
   cuenta del cliente. Los plugins de `wordpress/` se suben a mano al servidor (ver `wordpress/README.md`).
 - Se genera `/productos` (catálogo; no `/tienda`, porque en Hostinger esa carpeta es la del subdominio) y las fichas de producto muestran el precio. «Comprar ahora»

@@ -1,0 +1,134 @@
+---
+// «Cómo funciona»: los 4 gestos de la tienda (se usa en Inicio y en Nosotros).
+interface Props {
+  /** Título de la sección. */
+  title?: string;
+}
+const { title = '¿Cómo funciona?' } = Astro.props;
+
+const gestos = [
+  {
+    dir: 'derecha',
+    rot: 0,
+    titulo: 'Derecha: al carrito',
+    texto: 'Deslice la tarjeta hacia la derecha y el producto entra a su carrito.',
+  },
+  {
+    dir: 'izquierda',
+    rot: 180,
+    titulo: 'Izquierda: pasar',
+    texto: '¿No le interesa? Deslícela a la izquierda y aparece el siguiente.',
+  },
+  {
+    dir: 'arriba',
+    rot: -90,
+    titulo: 'Arriba: favorito',
+    texto: 'Guárdelo en favoritos para verlo con calma o comprarlo después.',
+  },
+  {
+    dir: 'abajo',
+    rot: 90,
+    titulo: 'Abajo: detalles',
+    texto: 'Vea fotos, descripción y precio completos antes de decidir.',
+  },
+];
+---
+<section id="como-funciona" class="como container" aria-labelledby="como-titulo">
+  <h2 id="como-titulo">{title}</h2>
+  <p class="intro">Cada producto es una tarjeta. Con un gesto decide qué hacer con ella.</p>
+  <ol class="gestos">
+    {gestos.map((g) => (
+      <li class={g.dir}>
+        <span class="icono" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="28" height="28" style={`transform:rotate(${g.rot}deg)`}>
+            <path d="M4 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </span>
+        <h3>{g.titulo}</h3>
+        <p>{g.texto}</p>
+      </li>
+    ))}
+  </ol>
+  <p class="nota">En computadora también puede usar los botones debajo de cada tarjeta o las flechas del teclado.</p>
+</section>
+
+<style>
+  .como {
+    padding-block: clamp(48px, 5.1vw, 98px);
+    scroll-margin-top: 16px;
+  }
+  h2 {
+    margin: 0;
+    font-weight: 700;
+    font-size: clamp(28px, 2.08vw, 40px);
+    line-height: 1.21;
+    color: var(--azul-900);
+  }
+  .intro,
+  .nota {
+    margin: 12px 0 0;
+    font-size: 17px;
+    line-height: 1.6;
+    color: var(--texto);
+  }
+  .nota {
+    margin-top: clamp(20px, 1.6vw, 30px);
+    font-size: 15px;
+  }
+  .gestos {
+    list-style: none;
+    margin: clamp(24px, 2.6vw, 50px) 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: clamp(16px, 1.5vw, 28px);
+  }
+  .gestos li {
+    min-width: 0;
+    padding: clamp(20px, 1.6vw, 30px);
+    border: 1px solid var(--borde);
+    border-radius: 20px;
+    background: linear-gradient(0deg, var(--celeste), var(--blanco-76));
+  }
+  .icono {
+    display: grid;
+    place-items: center;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    color: #fff;
+    background: var(--azul-900);
+  }
+  .derecha .icono {
+    background: #1f9d55;
+  }
+  .izquierda .icono {
+    background: var(--texto);
+  }
+  .arriba .icono {
+    background: var(--rojo);
+  }
+  h3 {
+    margin: 16px 0 0;
+    font-weight: 700;
+    font-size: clamp(18px, 1.15vw, 22px);
+    color: var(--azul-900);
+  }
+  .gestos p {
+    margin: 8px 0 0;
+    font-size: 16px;
+    line-height: 1.55;
+    color: var(--texto);
+  }
+
+  @media (max-width: 1100px) {
+    .gestos {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (max-width: 560px) {
+    .gestos {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

@@ -1,5 +1,5 @@
 ---
-import { url } from '../data/sitio';
+import { marca, url } from '../data/sitio';
 // Bloque de suscripción. Envía a Formspree (ver src/data/formularios.ts y .env.example).
 import { formspree } from '../data/formularios';
 ---
@@ -9,8 +9,8 @@ import { formspree } from '../data/formularios';
     <div class="texto">
       <p class="kicker">Suscríbase a nuestro boletín</p>
       <h2 id="newsletter-titulo">
-        <span>Para noticias y promociones</span>
-        <strong>Sé parte de la familia de CK OÍDO</strong>
+        <span>Novedades, ofertas y productos nuevos</span>
+        <strong>Sea parte de {marca.nombre}</strong>
       </h2>
     </div>
     <div class="suscripcion">
@@ -19,9 +19,9 @@ import { formspree } from '../data/formularios';
         action={formspree.boletin || '#'}
         method="post"
         data-formspree
-        data-ok="¡Listo! Ya es parte de la familia de CK Oído."
+        data-ok={`¡Listo! Ya está suscrito al boletín de ${marca.nombre}.`}
       >
-        <input type="hidden" name="_subject" value="Nueva suscripción al boletín de ckoido.com" />
+        <input type="hidden" name="_subject" value={`Nueva suscripción al boletín de ${marca.dominio}`} />
         <input type="hidden" name="formulario" value="Boletín" />
         <input type="text" name="_gotcha" tabindex="-1" autocomplete="off" class="trampa" aria-hidden="true" />
         <label class="sr-only" for="newsletter-email">Correo electrónico</label>

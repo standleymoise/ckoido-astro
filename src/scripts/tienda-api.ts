@@ -4,8 +4,8 @@
 // - El carrito se identifica con el encabezado Cart-Token (guardado en localStorage), así
 //   funciona desde otro dominio sin cookies ni nonce.
 // - Los favoritos son una lista de SKU en localStorage (no requieren cuenta).
-// - La sesión del cliente es un token propio (X-CKOido-Token) que entrega el plugin
-//   wordpress/mu-plugins/ckoido-cuenta.php. Se envía también a la Store API, así WooCommerce
+// - La sesión del cliente es un token propio (X-Tindershop-Token) que entrega el plugin
+//   wordpress/mu-plugins/tindershop-cuenta.php. Se envía también a la Store API, así WooCommerce
 //   reconoce al cliente y el pedido queda en su cuenta.
 
 export type Precio = { currency_code: string; currency_minor_unit: number };
@@ -39,10 +39,11 @@ export type ProductoApi = {
   prices: Precio & { price: string };
 };
 
-const CLAVE_TOKEN = 'ckoido-cart-token';
-const CLAVE_FAVS = 'ckoido-favoritos';
-const CLAVE_SESION = 'ckoido-sesion';
-const CLAVE_PERFIL = 'ckoido-perfil';
+const CLAVE_TOKEN = 'tindershop-cart-token';
+const CLAVE_FAVS = 'tindershop-favoritos';
+const CLAVE_SESION = 'tindershop-sesion';
+const CLAVE_PERFIL = 'tindershop-perfil';
+const ENCABEZADO_SESION = 'X-Tindershop-Token';
 
 export type Perfil = {
   email: string;
@@ -82,6 +83,24 @@ export const guardar = (k: string, v: string | null) => {
     /* sin almacenamiento: los datos duran mientras la página esté abierta */
   }
 };
+
+// Claves del nombre anterior del sitio: el carrito y los favoritos pasan a las nuevas una sola vez.
+// La sesión no (era de otro plugin de cuentas): el cliente vuelve a iniciar sesión.
+(() => {
+  const anteriores: [string, string | null][] = [
+    ['ckoido-cart-token', CLAVE_TOKEN],
+    ['ckoido-favoritos', CLAVE_FAVS],
+    ['ckoido-sesion', null],
+    ['ckoido-perfil', null],
+    ['ckoido-instalar-cerrado', 'tindershop-instalar-cerrado'],
+  ];
+  for (const [vieja, nueva] of anteriores) {
+    const valor = leer(vieja);
+    if (valor === null) continue;
+    if (nueva && leer(nueva) === null) guardar(nueva, valor);
+    guardar(vieja, null);
+  }
+})();
 
 // ---------- favoritos ----------
 export function leerFavoritos(): Set<string> {
@@ -137,7 +156,7 @@ export function crearCliente(API: string) {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (token) headers['Cart-Token'] = token;
     const sesion = leerSesion();
-    if (sesion) headers['X-CKOido-Token'] = sesion;
+    if (sesion) headers[ENCABEZADO_SESION] = sesion;
     const r = await fetch(API + ruta, {
       method: cuerpo === undefined ? 'GET' : 'POST',
       headers,
@@ -161,12 +180,12 @@ export function crearCliente(API: string) {
     return datos as T;
   }
 
-  // Rutas del plugin de cuentas: /wp-json/ckoido/v1/… (misma base que la Store API).
-  const WP = API.replace(/\/wc\/store\/v1\/?$/, '') + '/ckoido/v1';
+  // Rutas del plugin de cuentas: /wp-json/tindershop/v1/… (misma base que la Store API).
+  const WP = API.replace(/\/wc\/store\/v1\/?$/, '') + '/tindershop/v1';
   async function cuentaApi<T>(ruta: string, cuerpo?: unknown): Promise<T> {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     const sesion = leerSesion();
-    if (sesion) headers['X-CKOido-Token'] = sesion;
+    if (sesion) headers[ENCABEZADO_SESION] = sesion;
     const r = await fetch(WP + ruta, {
       method: cuerpo === undefined ? 'GET' : 'POST',
       headers,

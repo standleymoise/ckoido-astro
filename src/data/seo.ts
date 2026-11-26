@@ -1,8 +1,10 @@
 // Datos estructurados (schema.org) para Google: productos, migas y organización.
 import type { Producto } from './tienda';
 
-export const MARCA = 'CK Oído';
-export const FABRICANTE = 'Roleisa Farmacéutica';
+import { marca } from './sitio';
+
+/** Marca para los datos de Google. Los productos son de varias marcas: la tienda es la que los vende. */
+export const MARCA = marca.nombre;
 
 /** URL absoluta a partir de una ruta del sitio (ya con el prefijo). */
 export const absoluta = (ruta: string, site: URL | undefined, actual: URL) => new URL(ruta, site ?? actual).href;
@@ -17,10 +19,9 @@ export function productoLd(p: Producto, paginaUrl: string, descripcion?: string)
     sku: p.sku || undefined,
     image: p.imagenes.map((i) => i.src),
     url: paginaUrl,
-    brand: { '@type': 'Brand', name: MARCA },
-    manufacturer: { '@type': 'Organization', name: FABRICANTE },
     offers: {
       '@type': 'Offer',
+      seller: { '@type': 'Organization', name: MARCA },
       url: paginaUrl,
       price: p.precioNumero,
       priceCurrency: p.moneda,

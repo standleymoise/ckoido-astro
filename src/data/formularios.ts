@@ -1,8 +1,9 @@
 // Endpoints de Formspree para los formularios del sitio.
 //
-// Formularios creados en la cuenta de Formspree, proyecto «CK Oído»:
-//   CK Oído – Contacto → mgaklyon
-//   CK Oído – Boletín  → mvkabrzl
+// Formularios por defecto (cuenta de Formspree del sitio):
+//   Contacto → mgaklyon
+//   Boletín  → mvkabrzl
+// (Conviene renombrarlos a «Tindershop – …» en el panel de Formspree; el ID no cambia.)
 // Los IDs no son secretos (van en el HTML). Para usar otros, definirlos en `.env`
 // (ver `.env.example`) o en las variables de entorno del hosting y volver a hacer build:
 //   PUBLIC_FORMSPREE_CONTACTO=abcdwxyz   ← ID del formulario de contacto

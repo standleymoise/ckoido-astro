@@ -7,6 +7,7 @@ import PageTitle from '../../components/PageTitle.astro';
 import BlogCard from '../../components/BlogCard.astro';
 import Footer from '../../components/Footer.astro';
 import { getPosts, formatDate, type Post } from '../../data/blog';
+import { marca } from '../../data/sitio';
 
 export async function getStaticPaths() {
   const posts = await getPosts();
@@ -34,11 +35,11 @@ const jsonLd = {
   description: excerpt,
   datePublished: date.toISOString(),
   mainEntityOfPage: aqui,
-  author: { '@type': 'Organization', name: 'CK Oído' },
-  publisher: { '@type': 'Organization', name: 'CK Oído' },
+  author: { '@type': 'Organization', name: marca.nombre },
+  publisher: { '@type': 'Organization', name: marca.nombre },
 };
 ---
-<Base title={`${title} | Blog CK Oído`} description={excerpt} imagen={image} tipo="article" jsonLd={jsonLd}>
+<Base title={`${title} | Blog ${marca.nombre}`} description={excerpt} imagen={image} tipo="article" jsonLd={jsonLd}>
   <Header />
   <main>
     <PageTitle title="Blog" />

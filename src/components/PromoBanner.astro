@@ -1,12 +1,12 @@
 ---
-// Banner "Group 1000007192" (Figma node 170:104): foto de viaje + degradado azul.
+// Banner con foto a la derecha + degradado azul y botón a la tienda.
 import { Image } from 'astro:assets';
-import fotoBanner from '../assets/banner-viaje.png';
+import fotoBanner from '../assets/home/acerca-piscina.jpg';
 import { comprarHref } from '../data/sitio';
 import type { ImageMetadata } from 'astro';
 
 interface Props {
-  /** Foto de la derecha (por defecto la pareja de viaje del Figma). */
+  /** Foto de la derecha (por defecto amigos en la piscina). */
   image?: ImageMetadata;
   /** Posición de la foto (object-position) en escritorio. */
   imagePosition?: string;
@@ -25,10 +25,10 @@ const {
   imagePosition = '50% 30%',
   imageStart = '24.08%',
   gradient = 'linear-gradient(106.08deg, rgb(10, 69, 132) 31.666%, rgba(10, 69, 133, 0) 62.821%)',
-  kicker = 'Lleve las gotas a todos lados',
-  title = 'Disfrute al máximo.',
-  highlight = 'La prevención está en sus manos',
-  ctaLabel = 'Comprar ahora',
+  kicker = 'Su tienda en el bolsillo',
+  title = 'Deslice, guarde y compre.',
+  highlight = 'Desde donde esté',
+  ctaLabel = 'Ver productos',
   ctaHref = comprarHref,
 } = Astro.props;
 ---
@@ -109,7 +109,7 @@ const {
     font-size: clamp(28px, 2.24vw, 42.99px);
     line-height: 1.35;
   }
-  /* Contenido libre vía slot (p. ej. «¿Se puede prevenir la otitis externa?») */
+  /* Contenido libre vía slot (título y párrafo propios) */
   .libre {
     max-width: min(640px, 100%);
     margin-bottom: clamp(16px, 1.2vw, 23px);

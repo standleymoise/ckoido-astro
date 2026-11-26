@@ -2,7 +2,7 @@
 // Página /productos: catálogo leído de WooCommerce al compilar.
 // (No se llama /tienda porque en Hostinger esa carpeta es la del subdominio tienda., WordPress.)
 // Solo se genera cuando PUBLIC_TIENDA_URL está definida (ver src/data/tienda.ts);
-// en GitHub Pages no existe y «Comprar ahora» sigue llevando a «Dónde comprar».
+// en GitHub Pages no existe.
 import { Image } from 'astro:assets';
 import Base from '../layouts/Base.astro';
 import Header from '../components/Header.astro';
@@ -10,7 +10,7 @@ import PageTitle from '../components/PageTitle.astro';
 import Newsletter from '../components/Newsletter.astro';
 import Footer from '../components/Footer.astro';
 import { getProductos, tiendaActiva } from '../data/tienda';
-import { rutas, comprarProducto } from '../data/sitio';
+import { rutas, comprarProducto, marca } from '../data/sitio';
 
 export function getStaticPaths() {
   return tiendaActiva ? [{ params: { productos: 'productos' } }] : [];
@@ -18,31 +18,27 @@ export function getStaticPaths() {
 
 const productos = await getProductos();
 
-// Ficha en este sitio para los productos que la tienen; el resto abre la de WooCommerce.
-const fichas: Record<string, string> = {
-  'ck-oido': rutas.producto,
-  'ck-oido-suave': rutas.producto,
-  sincerax: rutas.sincerax,
-};
+// Cada tarjeta abre la tienda con ese producto primero.
+const enlace = (sku: string, fichaUrl: string) => (sku ? comprarProducto(sku) : fichaUrl);
 ---
 <Base
-  title="Tienda | CK Oído"
-  description="Compre CK Oído y Sincerax en línea: precios, disponibilidad y envío en Costa Rica."
+  title={`Productos | ${marca.nombre}`}
+  description={`Todos los productos de ${marca.nombre}: precios y disponibilidad. Ábralos en la tienda y compre deslizando.`}
 >
   <Header />
   <main>
-    <PageTitle title="Tienda" />
+    <PageTitle title="Productos" />
 
     <section class="tienda container" aria-label="Productos">
       {productos.length === 0 ? (
         <p class="vacio">
-          Pronto tendremos productos en línea. Mientras tanto, <a href={rutas.dondeComprar}>vea dónde comprar</a>.
+          Pronto tendremos productos en línea. Mientras tanto, <a href={rutas.contacto}>escríbanos</a> si busca algo en especial.
         </p>
       ) : (
         <ul class="lista">
           {productos.map((p) => (
             <li class="tarjeta">
-              <a class="foto" href={fichas[p.sku] ?? p.fichaUrl}>
+              <a class="foto" href={enlace(p.sku, p.fichaUrl)}>
                 {p.imagen && (
                   <Image
                     src={p.imagen.src}
@@ -55,7 +51,7 @@ const fichas: Record<string, string> = {
                 )}
               </a>
               <div class="info">
-                <h2><a href={fichas[p.sku] ?? p.fichaUrl}>{p.nombre}</a></h2>
+                <h2><a href={enlace(p.sku, p.fichaUrl)}>{p.nombre}</a></h2>
                 {p.resumen && <p class="resumen">{p.resumen}</p>}
                 <p class="precio">{p.precio}</p>
                 {p.enStock ? (

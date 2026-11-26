@@ -2,11 +2,11 @@
 // Lo que muestra la app instalada cuando no hay internet y la página pedida no está guardada.
 import Base from '../layouts/Base.astro';
 import Logo from '../components/Logo.astro';
-import { rutas } from '../data/sitio';
+import { rutas, marca } from '../data/sitio';
 ---
-<Base title="Sin conexión | CK Oído" noindex>
+<Base title={`Sin conexión | ${marca.nombre}`} noindex>
   <main class="sin-conexion">
-    <Logo size={170} />
+    <Logo size={210} />
     <h1>Sin conexión</h1>
     <p>Revise su internet. Las páginas que ya visitó se pueden abrir igual; el carrito y los pagos necesitan conexión.</p>
     <a class="btn" href={rutas.inicio}>Volver a intentar</a>

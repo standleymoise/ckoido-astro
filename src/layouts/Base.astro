@@ -1,9 +1,9 @@
 ---
 import { Font, getImage } from 'astro:assets';
-import { url } from '../data/sitio';
+import { url, marca } from '../data/sitio';
 import InstalarApp from '../components/InstalarApp.astro';
 import { tiendaUrl } from '../data/tienda';
-import fotoCompartir from '../assets/producto/ck-oido-caja.jpg';
+import fotoCompartir from '../assets/compartir-tindershop.png';
 interface Props {
   title: string;
   description?: string;
@@ -17,7 +17,7 @@ interface Props {
 }
 const {
   title,
-  description = 'CK Oído: gotas para secar el agua atrapada en el oído y prevenir infecciones del oído externo.',
+  description = marca.descripcion,
   noindex = false,
   imagen = fotoCompartir,
   tipo = 'website',
@@ -51,7 +51,7 @@ const ld = jsonLd ? JSON.stringify(jsonLd).replaceAll('<', '\\u003c') : '';
     <meta name="description" content={description} />
     {noindex && <meta name="robots" content="noindex" />}
     <meta property="og:type" content={tipo} />
-    <meta property="og:site_name" content="CK Oído" />
+    <meta property="og:site_name" content={marca.nombre} />
     <meta property="og:locale" content="es_CR" />
     <meta property="og:url" content={canonica} />
     <meta property="og:title" content={title} />
@@ -63,16 +63,16 @@ const ld = jsonLd ? JSON.stringify(jsonLd).replaceAll('<', '\\u003c') : '';
     <link rel="sitemap" href={url('/sitemap-index.xml')} />
     <link rel="manifest" href={url('/manifest.webmanifest')} />
     <link rel="apple-touch-icon" href={url('/iconos/apple-180.png')} />
-    <meta name="apple-mobile-web-app-title" content="CK Oído" />
+    <meta name="apple-mobile-web-app-title" content={marca.nombre} />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="theme-color" content="#0a4383" />
+    <meta name="theme-color" content={marca.color} />
     <Font cssVariable="--fuente-texto" preload={[{ weight: 400 }]} />
     <Font cssVariable="--fuente-titulos" />
     {ld && <script type="application/ld+json" set:html={ld} />}
   </head>
   <body>
     <slot />
-    <InstalarApp nombre="CK Oído" icono={url('/iconos/icono-192.png')} color="#ed2853" clave="ckoido-instalar-cerrado" />
+    <InstalarApp nombre={marca.nombre} icono={url('/iconos/icono-192.png')} color={marca.acento} clave="tindershop-instalar-cerrado" />
     {import.meta.env.PROD && (
       <script is:inline define:vars={{ sw: url('/sw.js'), scope: url('/') }}>
         // App instalable: el service worker guarda el sitio para abrirlo rápido y sin conexión.
