@@ -32,6 +32,8 @@ export type Personaje = {
   sostener: (si: boolean) => void;
   /** Visible en tercera persona; oculto en primera (la cámara está en su cabeza). */
   mostrar: (si: boolean) => void;
+  /** Primera persona sin esconder todo: solo la cabeza (se ven los brazos y las manos en el manubrio). */
+  primeraPersona?: (si: boolean) => void;
 };
 
 export const ALTURA_OJOS = 1.68;

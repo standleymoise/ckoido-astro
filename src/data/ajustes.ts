@@ -8,13 +8,20 @@ import { tiendaUrl, tiendaActiva } from './tienda';
 export type Experiencia = 'tarjetas' | '3d';
 export type Exhibicion = 'gondola' | 'perchero' | 'maniqui' | 'estante' | 'exhibidor';
 
-type Ajustes = { experiencia: Experiencia; exhibiciones: Record<string, Exhibicion>; pasillos: string[] };
+export type Cancion = { url: string; titulo: string };
+type Ajustes = {
+  experiencia: Experiencia;
+  exhibiciones: Record<string, Exhibicion>;
+  pasillos: string[];
+  musica: Cancion[];
+  sinMusica: boolean;
+};
 const TIPOS: Exhibicion[] = ['gondola', 'perchero', 'maniqui', 'estante', 'exhibidor'];
 
 let cache: Promise<Ajustes> | undefined;
 
 function getAjustes(): Promise<Ajustes> {
-  const vacio: Ajustes = { experiencia: 'tarjetas', exhibiciones: {}, pasillos: [] };
+  const vacio: Ajustes = { experiencia: 'tarjetas', exhibiciones: {}, pasillos: [], musica: [], sinMusica: false };
   if (!tiendaActiva) return Promise.resolve(vacio);
   cache ??= fetch(`${tiendaUrl}/wp-json/tindershop/v1/ajustes`)
     .then((r) => (r.ok ? r.json() : null))
@@ -27,7 +34,12 @@ function getAjustes(): Promise<Ajustes> {
       const experiencia: Experiencia = d.experiencia === '3d' ? '3d' : 'tarjetas';
       let pasillos: string[] = Array.isArray(d.pasillos) ? d.pasillos.map((l: unknown) => String(l ?? '').slice(0, 40)) : [];
       if (pasillos.every((l) => !l.trim())) pasillos = []; // campo vacío en WordPress = sin letreros escritos
-      return { experiencia, exhibiciones, pasillos };
+      const musica: Cancion[] = Array.isArray(d.musica)
+        ? d.musica
+            .filter((c: { url?: unknown }) => typeof c?.url === 'string' && /^https?:\/\//.test(c.url))
+            .map((c: { url: string; titulo?: unknown }) => ({ url: c.url, titulo: String(c.titulo ?? '').slice(0, 80) }))
+        : [];
+      return { experiencia, exhibiciones, pasillos, musica, sinMusica: d.sinMusica === true };
     })
     .catch(() => vacio);
   return cache;
@@ -76,4 +88,10 @@ export async function getDestacados(): Promise<number[]> {
  */
 export async function getPasillos(): Promise<string[]> {
   return (await getAjustes()).pasillos;
+}
+
+/** Música de la tienda 3D (Ajustes → Tindershop): canciones subidas por el dueño, o las de fábrica. */
+export async function getMusica(): Promise<{ canciones: Cancion[]; apagada: boolean }> {
+  const a = await getAjustes();
+  return { canciones: a.musica, apagada: a.sinMusica };
 }

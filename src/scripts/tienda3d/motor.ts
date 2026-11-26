@@ -132,8 +132,16 @@ export function iniciarMotor(
   const rayo = new THREE.Raycaster();
 
   function aplicarModo() {
-    yo.mostrar(modo === 'tercera');
-    pitch = modo === 'tercera' ? Math.min(Math.max(pitch, -0.9), 0.25) : Math.max(pitch, -0.5);
+    if (yo.primeraPersona) {
+      // Persona realista: en primera persona se esconde solo la cabeza (se ven brazos y manos).
+      yo.mostrar(true);
+      yo.primeraPersona(modo === 'primera');
+    } else yo.mostrar(modo === 'tercera');
+    // En primera persona arranca mirando un poco hacia abajo: se ven las manos en el carrito y la góndola.
+    pitch = modo === 'tercera' ? Math.min(Math.max(pitch, -0.9), 0.25) : -0.5;
+    // En primera persona, un poco más de campo visual (como la vista de una persona): entran las manos.
+    camara.fov = modo === 'primera' ? 76 : 65;
+    camara.updateProjectionMatrix();
   }
   aplicarModo();
 
@@ -710,7 +718,8 @@ export function iniciarMotor(
 
     // Cámara: en sus ojos, o detrás (siempre mira hacia donde mira el comprador).
     if (modo === 'primera') {
-      camara.position.set(yo.posicion.x, ALTURA_OJOS, yo.posicion.z);
+      // A la altura de los ojos, un poco adelante (que no se vea el cuello por dentro).
+      camara.position.set(yo.posicion.x, ALTURA_OJOS, yo.posicion.z).addScaledVector(frenteDe(yaw), yo.primeraPersona ? 0.14 : 0);
       camara.rotation.set(pitch, yaw, 0, 'YXZ');
     } else {
       // Por encima del hombro derecho y mirando un poco por delante: se ve el carrito y lo que hay

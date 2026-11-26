@@ -13,7 +13,7 @@ import Logo from '../Logo.astro';
 import { rutas, marca, url } from '../../data/sitio';
 import type { Producto } from '../../data/tienda';
 import { storeApiUrl, tiendaUrl } from '../../data/tienda';
-import { getExhibiciones, getDestacados, getPasillos } from '../../data/ajustes';
+import { getExhibiciones, getDestacados, getPasillos, getMusica } from '../../data/ajustes';
 
 interface Props {
   productos: Producto[];
@@ -27,6 +27,7 @@ const exhibiciones = await getExhibiciones();
 const destacados = new Set(await getDestacados());
 const exhibicionDe = (p: Producto) => p.categorias.map((c) => exhibiciones[c.slug]).find(Boolean) ?? 'gondola';
 const pasillos = await getPasillos();
+const musica = await getMusica();
 const datos = await Promise.all(
   productos.map(async (p) => {
     let img = '';
@@ -61,6 +62,7 @@ const datos = await Promise.all(
   data-presencia={`${tiendaUrl}/wp-json/tindershop/v1/presencia`}
   data-pagar={`${rutas.tarjetas}#carrito`}
   data-modelos={url('/modelos/')}
+  data-musica={JSON.stringify(musica)}
 >
   <h1 class="sr-only">{marca.nombre}: tienda 3D</h1>
   <div class="lienzo" data-lienzo></div>
@@ -77,6 +79,11 @@ const datos = await Promise.all(
         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="11" height="15" rx="2" /><path d="M9 3h9a2 2 0 0 1 2 2v13" /></svg>
         <span class="sr-only">Comprar con tarjetas</span>
       </a>
+      <button class="btn-redondo" type="button" data-musica-boton title="Música" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l11-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="17" cy="16" r="3" /></svg>
+        <span class="tachado" data-musica-tachado hidden></span>
+        <span class="sr-only">Silenciar o activar la música</span>
+      </button>
       <button class="btn-redondo" type="button" data-camara title="Cambiar cámara (C)">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h3l2-3h8l2 3h3v11H3z" /><circle cx="12" cy="13" r="3.5" /></svg>
         <span class="etiqueta-camara" data-etiqueta-camara>3ª</span>
@@ -100,6 +107,7 @@ const datos = await Promise.all(
     <button class="pagar" type="button" data-pagar-aviso hidden>Pagar en la caja →</button>
   </div>
   <div class="mira" data-mira hidden aria-hidden="true"></div>
+  <p class="teclas" data-teclas hidden><kbd>P</kbd> ir a pagar · <kbd>C</kbd> cámara · <kbd>Esc</kbd> soltar el mouse</p>
 
   <!-- Celular -->
   <div class="joystick" data-joystick hidden>
@@ -160,7 +168,7 @@ const datos = await Promise.all(
         </button>
       </div>
       <p class="inicio-ayuda" data-ayuda-pc>
-        <kbd>W</kbd>/<kbd>S</kbd> adelante y atrás · <kbd>A</kbd>/<kbd>D</kbd> girar · <kbd>Shift</kbd> correr · mouse para mirar · clic o <kbd>E</kbd> ver producto · <kbd>C</kbd> cambiar cámara
+        <kbd>W</kbd>/<kbd>S</kbd> adelante y atrás · <kbd>A</kbd>/<kbd>D</kbd> girar · <kbd>Shift</kbd> correr · mouse para mirar · clic o <kbd>E</kbd> ver producto · <kbd>C</kbd> cambiar cámara · <kbd>P</kbd> ir a pagar
       </p>
       <p class="inicio-ayuda" data-ayuda-tactil hidden>
         Joystick: arriba y abajo para caminar, a los lados para girar · arrastre para mirar · toque un producto para verlo
@@ -345,11 +353,22 @@ const datos = await Promise.all(
   }
   $('[data-ver-carrito]').addEventListener('click', () => abrirCarrito(false));
   // «Ir a pagar»: el comprador camina solo, con su carrito, hasta la caja.
-  $('[data-ir-caja]').addEventListener('click', () => {
-    hojaCarrito.close();
+  function irAPagar() {
+    if (hojaCarrito.open) hojaCarrito.close();
     if (!motor) return void (location.href = urlPagar);
+    if (document.pointerLockElement) document.exitPointerLock();
     motor.irACaja();
     avisar('Yendo a la caja…');
+  }
+  $('[data-ir-caja]').addEventListener('click', irAPagar);
+  // Tecla P: ir a pagar desde cualquier lado (en primera persona el mouse mira, no hace clic en botones).
+  addEventListener('keydown', async (e) => {
+    if (e.code !== 'KeyP' || !motor || e.repeat) return;
+    if ((e.target as HTMLElement | null)?.closest?.('input, textarea, select') || hojaCarrito.open) return;
+    if (enMano) await devolver();
+    const c = carrito ?? (cliente.tieneCarrito() ? await cargarCarrito().catch(() => null) : null);
+    if (!c?.items_count) return avisar('Su carrito está vacío: agregue algo antes de pagar.');
+    irAPagar();
   });
   $('[data-pagar-aviso]').addEventListener('click', () => abrirCarrito(true));
 
@@ -366,6 +385,7 @@ const datos = await Promise.all(
   const pintarCamara = (m: Modo) => {
     etiquetaCamara.textContent = m === 'tercera' ? '3ª' : '1ª';
     $('[data-mira]').hidden = m !== 'primera';
+    $('[data-teclas]').hidden = tactil;
   };
 
   // ---------- su personaje ----------
@@ -436,6 +456,37 @@ const datos = await Promise.all(
   });
   pintarPersonaje();
 
+  // ---------- música (como en una tienda de verdad) ----------
+  // Arranca con el clic de «Tercera / Primera persona» (los navegadores no dejan sonar nada antes).
+  const ajustesMusica: { canciones: { url: string; titulo: string }[]; apagada: boolean } = JSON.parse(raiz.dataset.musica || '{"canciones":[],"apagada":false}');
+  let silencio = (() => {
+    try {
+      return localStorage.getItem('tindershop-musica') === 'no';
+    } catch {
+      return false;
+    }
+  })();
+  let musica: import('../../scripts/tienda3d/musica').Musica | null = null;
+  async function iniciarMusica() {
+    if (ajustesMusica.apagada) return;
+    const { crearMusica } = await import('../../scripts/tienda3d/musica');
+    musica = crearMusica(ajustesMusica.canciones, (titulo) => titulo && !silencio && avisar(`♪ ${titulo}`));
+    $('[data-musica-boton]').hidden = false;
+    $('[data-musica-tachado]').hidden = !silencio;
+    musica.silenciar(silencio);
+    musica.iniciar();
+  }
+  $('[data-musica-boton]').addEventListener('click', () => {
+    silencio = !silencio;
+    musica?.silenciar(silencio);
+    $('[data-musica-tachado]').hidden = !silencio;
+    try {
+      localStorage.setItem('tindershop-musica', silencio ? 'no' : 'si');
+    } catch {
+      /* sin almacenamiento */
+    }
+  });
+
   async function empezar(modo: Modo) {
     $('[data-cargando]').hidden = false;
     raiz.querySelectorAll<HTMLButtonElement>('[data-empezar]').forEach((b) => (b.disabled = true));
@@ -486,6 +537,7 @@ const datos = await Promise.all(
       $('[data-gente-n]').textContent = otros.length === 1 ? '1 persona más en la tienda' : `${otros.length} personas más en la tienda`;
     });
     sincronizar3D();
+    iniciarMusica();
     // ?depurar en la dirección: el motor queda en window.tienda3d (para pruebas).
     if (new URLSearchParams(location.search).has('depurar')) Object.assign(window, { tienda3d: motor });
     $('[data-inicio]').hidden = true;
@@ -648,6 +700,18 @@ const datos = await Promise.all(
     stroke-linecap: round;
     stroke-linejoin: round;
   }
+  .tachado {
+    position: absolute;
+    width: 30px;
+    height: 2px;
+    background: var(--rojo);
+    transform: rotate(-45deg);
+    border-radius: 2px;
+  }
+  .tachado[hidden],
+  .btn-redondo[hidden] {
+    display: none;
+  }
   .etiqueta-camara {
     position: absolute;
     bottom: -4px;
@@ -759,6 +823,26 @@ const datos = await Promise.all(
   }
   .mira[hidden] {
     display: none;
+  }
+  .teclas {
+    position: absolute;
+    left: 16px;
+    bottom: max(16px, env(safe-area-inset-bottom));
+    margin: 0;
+    padding: 6px 10px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.85);
+    color: var(--azul-900);
+    font-size: 12px;
+    pointer-events: none;
+  }
+  .teclas[hidden] {
+    display: none;
+  }
+  @media (max-width: 900px) {
+    .teclas {
+      display: none;
+    }
   }
 
   .joystick {

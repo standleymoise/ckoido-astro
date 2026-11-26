@@ -259,7 +259,8 @@ export async function cargarPersonas(base: string): Promise<FabricaPersonas> {
           grupo.updateMatrixWorld(true);
           // Manos en el manubrio (adelante del comprador; su izquierda es −x mirando hacia −z).
           for (const [b, x] of [[brazos.izq, -1], [brazos.der, 1]] as const) {
-            const meta = grupo.localToWorld(new THREE.Vector3(x * 0.2, MANUBRIO.y, MANUBRIO.z));
+            // La muñeca va apenas detrás y arriba del manubrio: así la palma queda sobre él, agarrándolo.
+            const meta = grupo.localToWorld(new THREE.Vector3(x * 0.2, MANUBRIO.y + 0.015, MANUBRIO.z + 0.07));
             const polo = grupo.localToWorld(new THREE.Vector3(x * 0.6, 0.6, 0.2)).sub(grupo.localToWorld(new THREE.Vector3(0, 1.3, -0.2)));
             alcanzar(b.hombro, b.codo, b.mano, meta, polo.normalize());
           }
@@ -273,6 +274,12 @@ export async function cargarPersonas(base: string): Promise<FabricaPersonas> {
       },
       mostrar(si) {
         grupo.visible = si;
+      },
+      primeraPersona(si) {
+        // La cabeza (con pelo, ojos y cejas, que cuelgan de ese hueso) se achica a nada: la cámara está
+        // en sus ojos y no la tapa; el resto del cuerpo se ve al mirar hacia abajo.
+        const cabeza = modelo.getObjectByName('Head');
+        if (cabeza) cabeza.scale.setScalar(si ? 0.001 : 1);
       },
     };
     return p;

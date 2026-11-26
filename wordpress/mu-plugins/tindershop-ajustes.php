@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Tindershop – Experiencia de la tienda
  * Description: Elige qué ve el cliente al entrar al sitio en Astro: las tarjetas deslizables (swipe) o la tienda 3D que se recorre caminando. Se configura en Ajustes → Tindershop. Al cambiarlo, el sitio se vuelve a publicar solo (si está el plugin «Publicar el sitio al guardar»).
- * Version: 1.2.0
+ * Version: 1.3.0
  *
  * Ruta pública (solo lectura, la lee Astro al compilar):
  *   GET /wp-json/tindershop/v1/ajustes → { experiencia, exhibiciones: { <slug de categoría>: tipo }, pasillos: [texto, …] }
@@ -23,6 +23,23 @@ const TINDERSHOP_OPCION_EXPERIENCIA = 'tindershop_experiencia';
 const TINDERSHOP_META_EXHIBICION   = 'tindershop_exhibicion';
 const TINDERSHOP_OPCION_PASILLOS    = 'tindershop_pasillos';
 const TINDERSHOP_OPCION_PRESENCIA   = 'tindershop_presencia';
+const TINDERSHOP_OPCION_MUSICA      = 'tindershop_musica';         // ids de audios de la biblioteca, separados por coma
+const TINDERSHOP_OPCION_SIN_MUSICA  = 'tindershop_musica_apagada'; // '1' = la tienda 3D sin música
+// Quién puede cambiar estos ajustes: el administrador y el gestor de la tienda (WooCommerce).
+const TINDERSHOP_PERMISO            = 'manage_woocommerce';
+
+/** Canciones elegidas en la biblioteca de medios (dirección y título), en el orden elegido. */
+function tindershop_musica(): array {
+	$ids = array_filter( array_map( 'absint', explode( ',', (string) get_option( TINDERSHOP_OPCION_MUSICA, '' ) ) ) );
+	$lista = array();
+	foreach ( $ids as $id ) {
+		$url = wp_get_attachment_url( $id );
+		if ( $url && str_starts_with( (string) get_post_mime_type( $id ), 'audio/' ) ) {
+			$lista[] = array( 'url' => $url, 'titulo' => get_the_title( $id ) );
+		}
+	}
+	return $lista;
+}
 
 /** Letreros escritos a mano (uno por línea = un pasillo). Vacío = se arman con las categorías. */
 function tindershop_pasillos(): array {
@@ -87,6 +104,8 @@ add_action(
 					'experiencia'  => tindershop_experiencia(),
 					'exhibiciones' => (object) tindershop_mapa_exhibiciones(),
 					'pasillos'     => tindershop_pasillos(),
+					'musica'       => tindershop_musica(),
+					'sinMusica'    => '1' === (string) get_option( TINDERSHOP_OPCION_SIN_MUSICA, '' ),
 				),
 			)
 		);
@@ -148,11 +167,19 @@ add_action( 'update_option_' . TINDERSHOP_OPCION_EXPERIENCIA, 'tindershop_pedir_
 add_action( 'add_option_' . TINDERSHOP_OPCION_EXPERIENCIA, 'tindershop_pedir_build' );
 add_action( 'update_option_' . TINDERSHOP_OPCION_PASILLOS, 'tindershop_pedir_build' );
 add_action( 'add_option_' . TINDERSHOP_OPCION_PASILLOS, 'tindershop_pedir_build' );
+foreach ( array( TINDERSHOP_OPCION_MUSICA, TINDERSHOP_OPCION_SIN_MUSICA ) as $opcion ) {
+	add_action( 'update_option_' . $opcion, 'tindershop_pedir_build' );
+	add_action( 'add_option_' . $opcion, 'tindershop_pedir_build' );
+}
+// El gestor de la tienda también puede guardar esta página (por defecto WordPress pide «manage_options»).
+add_filter( 'option_page_capability_tindershop', fn() => TINDERSHOP_PERMISO );
 
 add_action(
 	'admin_menu',
 	function () {
-		add_options_page( 'Tindershop', 'Tindershop', 'manage_options', 'tindershop', 'tindershop_pantalla_ajustes' );
+		$pagina = add_options_page( 'Tindershop', 'Tindershop', TINDERSHOP_PERMISO, 'tindershop', 'tindershop_pantalla_ajustes' );
+		// Selector de la biblioteca de medios, solo en esta página.
+		add_action( 'admin_print_scripts-' . $pagina, 'wp_enqueue_media' );
 	}
 );
 
@@ -178,11 +205,29 @@ add_action(
 				'sanitize_callback' => fn( $v ) => implode( PHP_EOL, array_map( fn( $l ) => mb_substr( sanitize_text_field( $l ), 0, 40 ), preg_split( '/\R/', (string) $v ) ?: array() ) ),
 			)
 		);
+		register_setting(
+			'tindershop',
+			TINDERSHOP_OPCION_MUSICA,
+			array(
+				'type'              => 'string',
+				'default'           => '',
+				'sanitize_callback' => fn( $v ) => implode( ',', array_slice( array_filter( array_map( 'absint', explode( ',', (string) $v ) ) ), 0, 30 ) ),
+			)
+		);
+		register_setting(
+			'tindershop',
+			TINDERSHOP_OPCION_SIN_MUSICA,
+			array(
+				'type'              => 'string',
+				'default'           => '',
+				'sanitize_callback' => fn( $v ) => '1' === (string) $v ? '1' : '',
+			)
+		);
 	}
 );
 
 function tindershop_pantalla_ajustes(): void {
-	if ( ! current_user_can( 'manage_options' ) ) {
+	if ( ! current_user_can( TINDERSHOP_PERMISO ) ) {
 		return;
 	}
 	$actual = tindershop_experiencia();
@@ -213,6 +258,56 @@ function tindershop_pantalla_ajustes(): void {
 						<textarea id="tindershop-pasillos" name="<?php echo esc_attr( TINDERSHOP_OPCION_PASILLOS ); ?>" rows="6" class="large-text" placeholder="Higiene personal&#10;Avena y galletas&#10;Bebidas"><?php echo esc_textarea( (string) get_option( TINDERSHOP_OPCION_PASILLOS, '' ) ); ?></textarea>
 						<p class="description">Tienda 3D: una línea por pasillo, de izquierda a derecha al entrar (línea 1 = pasillo 1).
 							Una línea vacía, o si no escribe nada, usa los nombres de las categorías que hay en ese pasillo.</p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row">Música de la tienda 3D</th>
+					<td>
+						<?php $musica = tindershop_musica(); ?>
+						<input type="hidden" id="tindershop-musica" name="<?php echo esc_attr( TINDERSHOP_OPCION_MUSICA ); ?>" value="<?php echo esc_attr( (string) get_option( TINDERSHOP_OPCION_MUSICA, '' ) ); ?>">
+						<ol id="tindershop-musica-lista" style="margin:0 0 8px 18px">
+							<?php foreach ( $musica as $c ) : ?>
+								<li><?php echo esc_html( $c['titulo'] ); ?></li>
+							<?php endforeach; ?>
+						</ol>
+						<p id="tindershop-musica-vacia" class="description" <?php echo $musica ? 'hidden' : ''; ?>>Sin canciones propias: suenan las 4 canciones de fábrica de Tindershop.</p>
+						<p>
+							<button type="button" class="button" id="tindershop-musica-elegir">Elegir canciones (MP3)</button>
+							<button type="button" class="button-link" id="tindershop-musica-quitar">Quitar todas</button>
+						</p>
+						<label><input type="checkbox" name="<?php echo esc_attr( TINDERSHOP_OPCION_SIN_MUSICA ); ?>" value="1" <?php checked( '1', (string) get_option( TINDERSHOP_OPCION_SIN_MUSICA, '' ) ); ?>> Tienda 3D sin música</label>
+						<p class="description">Suben y eligen archivos de audio de la biblioteca de medios; suenan en ese orden, una tras otra, y vuelven a empezar.
+							Use música propia o con licencia para uso comercial. Cada cliente puede silenciarla en la tienda.</p>
+						<script>
+							( function () {
+								const campo = document.getElementById( 'tindershop-musica' );
+								const lista = document.getElementById( 'tindershop-musica-lista' );
+								const vacia = document.getElementById( 'tindershop-musica-vacia' );
+								let marco = null;
+								document.getElementById( 'tindershop-musica-elegir' ).addEventListener( 'click', function () {
+									if ( ! marco ) {
+										marco = wp.media( { title: 'Música de la tienda 3D', button: { text: 'Usar estas canciones' }, library: { type: 'audio' }, multiple: 'add' } );
+										marco.on( 'select', function () {
+											const elegidas = marco.state().get( 'selection' ).toJSON();
+											campo.value = elegidas.map( ( a ) => a.id ).join( ',' );
+											lista.innerHTML = '';
+											elegidas.forEach( ( a ) => {
+												const li = document.createElement( 'li' );
+												li.textContent = a.title;
+												lista.appendChild( li );
+											} );
+											vacia.hidden = elegidas.length > 0;
+										} );
+									}
+									marco.open();
+								} );
+								document.getElementById( 'tindershop-musica-quitar' ).addEventListener( 'click', function () {
+									campo.value = '';
+									lista.innerHTML = '';
+									vacia.hidden = false;
+								} );
+							} )();
+						</script>
 					</td>
 				</tr>
 			</table>

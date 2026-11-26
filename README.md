@@ -150,6 +150,11 @@ su dirección (`/tienda-3d/` o `/tarjetas/`). Para probar la 3D como inicio sin 
 - Multijugador: cada comprador ve a los demás (con su carrito) y no se pueden atravesar. Usa WordPress
   (`POST /wp-json/tindershop/v1/presencia`, cada ~1 s, sin datos personales); para cientos de personas a la
   vez conviene un servicio de WebSocket (solo cambia `src/scripts/tienda3d/presencia.ts`).
+- Primera persona: se esconde solo la cabeza; se ven los brazos y las manos en el manubrio (IK).
+  Tecla **P**: ir a pagar (en primera persona el mouse mira, no hace clic en botones); Esc suelta el mouse.
+- Música: 4 canciones de fábrica sintetizadas en el navegador (originales, sin archivos) o las que el
+  administrador o el gestor de la tienda elijan en WordPress (Ajustes → Tindershop → Música, desde la
+  biblioteca de medios). Cada cliente la silencia con el botón de la nota musical.
 - «Ir a pagar»: el comprador camina solo con su carrito hasta la caja (hay un cajero); ahí «Pagar ahora»
   manda al checkout de siempre (`/tarjetas/#carrito`).
 - Exhibición por categoría (WordPress → Productos → Categorías → «Exhibición en la tienda 3D»): góndola,
