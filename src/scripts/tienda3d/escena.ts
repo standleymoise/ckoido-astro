@@ -79,11 +79,13 @@ export type Tienda = {
   inicio: THREE.Vector3;
 };
 
-// Medidas de la tienda (metros).
-const ANCHO = 24;
+// Medidas de la tienda (metros). El ancho crece con las categorías (más pasillos): lo fija construirTienda.
+let ANCHO = 24;
 const FONDO = 28;
 const ALTO = 4.2;
-const MEDIO_X = ANCHO / 2;
+let MEDIO_X = ANCHO / 2;
+/** Pasillos que se agregan de cada lado si hay muchas categorías (hasta 4 por lado: 12 pasillos). */
+const MAX_EXTRA = 4;
 const MEDIO_Z = FONDO / 2;
 const Z0 = -11; // fondo de los pasillos
 const Z1 = 3; // frente de los pasillos (hacia la entrada)
@@ -322,9 +324,35 @@ export function construirTienda(
   const colores = new Map<number, THREE.Color>();
   const esperandoTextura = new Map<number, ((t: THREE.Texture) => void)[]>();
   const cargador = new THREE.TextureLoader();
+
+  // ---------- qué productos van en cada tipo de exhibición ----------
+  const grupos: Record<Exhibicion, Producto3D[]> = { gondola: [], perchero: [], maniqui: [], estante: [], exhibidor: [] };
+  for (const p of productos) grupos[p.exhibicion].push(p);
+  const ordenar = (l: Producto3D[]) =>
+    [...l].sort((a, b) => a.categoria.localeCompare(b.categoria) || a.nombre.localeCompare(b.nombre));
+  // Si ninguna categoría quedó en góndola, las góndolas muestran todo (la tienda nunca queda vacía).
+  const enGondola = ordenar(grupos.gondola.length ? grupos.gondola : productos);
+  const hayPercheros = grupos.perchero.length > 0;
+  const hayEstantes = grupos.estante.length > 0;
+  // Sin categoría (WooCommerce no la manda): van juntos como «Otros productos».
+  const grupoDe = (p: Producto3D) => p.categoria || 'Otros productos';
+
+  // ---------- tamaño: un pasillo por categoría ----------
+  // La tienda base tiene 4 pasillos (24 m de ancho). Si hay más categorías de góndola que pasillos de
+  // góndola, se agrega un pasillo de cada lado (5 m más por lado) hasta que alcancen.
+  const categoriasGondola = new Set(enGondola.map(grupoDe)).size;
+  const pasillosBase = 4 - (hayPercheros ? 1 : 0);
+  const extra = Math.min(MAX_EXTRA, Math.max(0, Math.ceil((categoriasGondola - pasillosBase) / 2)));
+  MEDIO_X = 12 + 5 * extra;
+  ANCHO = MEDIO_X * 2;
+  // Góndolas dobles cada 5 m (en el centro y hacia los costados); entre ellas, los pasillos.
+  const POS_GONDOLAS = Array.from({ length: 2 * extra + 3 }, (_, i) => (i - extra - 1) * 5);
+  const ULTIMA = POS_GONDOLAS[POS_GONDOLAS.length - 1];
   // Pasillos (de izquierda a derecha al entrar) y las categorías que hay en cada uno, para el letrero.
-  const BORDES_PASILLO = [-MEDIO_X, -5, 0, 5, MEDIO_X];
-  const CENTROS_PASILLO = [-8.4, -2.5, 2.5, 8.4];
+  const BORDES_PASILLO = [-MEDIO_X, ...POS_GONDOLAS, MEDIO_X];
+  const CENTROS_PASILLO = BORDES_PASILLO.slice(1).map((b, i) =>
+    i === 0 ? -8.4 - 5 * extra : i === POS_GONDOLAS.length ? 8.4 + 5 * extra : (b + BORDES_PASILLO[i]) / 2,
+  );
   const categoriasPasillo = CENTROS_PASILLO.map(() => new Set<string>());
   const anotarPasillo = (x: number, categoria: string) => {
     if (!categoria) return;
@@ -429,17 +457,22 @@ export function construirTienda(
     sol.castShadow = true;
     sol.shadow.mapSize.set(1024, 1024);
     const s = sol.shadow.camera as THREE.OrthographicCamera;
-    s.left = -14;
-    s.right = 14;
+    s.left = -MEDIO_X - 2;
+    s.right = MEDIO_X + 2;
     s.top = 16;
     s.bottom = -16;
     sol.shadow.bias = -0.0008;
     sol.shadow.normalBias = 0.02;
   }
   escena.add(sol);
-  const paneles = new THREE.InstancedMesh(new THREE.BoxGeometry(0.5, 0.04, 4), new THREE.MeshBasicMaterial({ color: '#ffffff' }), 20);
+  const XS_PANELES = Array.from({ length: 4 + 2 * extra }, (_, i) => -7.5 - 5 * extra + i * 5);
+  const paneles = new THREE.InstancedMesh(
+    new THREE.BoxGeometry(0.5, 0.04, 4),
+    new THREE.MeshBasicMaterial({ color: '#ffffff' }),
+    XS_PANELES.length * 5,
+  );
   let k = 0;
-  for (const x of [-7.5, -2.5, 2.5, 7.5]) {
+  for (const x of XS_PANELES) {
     for (const z of [-10, -5, 0, 5, 10]) {
       m4.makeTranslation(x, ALTO - 0.03, z);
       paneles.setMatrixAt(k++, m4);
@@ -447,15 +480,6 @@ export function construirTienda(
   }
   escena.add(paneles);
 
-  // ---------- qué productos van en cada tipo de exhibición ----------
-  const grupos: Record<Exhibicion, Producto3D[]> = { gondola: [], perchero: [], maniqui: [], estante: [], exhibidor: [] };
-  for (const p of productos) grupos[p.exhibicion].push(p);
-  const ordenar = (l: Producto3D[]) =>
-    [...l].sort((a, b) => a.categoria.localeCompare(b.categoria) || a.nombre.localeCompare(b.nombre));
-  // Si ninguna categoría quedó en góndola, las góndolas muestran todo (la tienda nunca queda vacía).
-  const enGondola = ordenar(grupos.gondola.length ? grupos.gondola : productos);
-  const hayPercheros = grupos.perchero.length > 0;
-  const hayEstantes = grupos.estante.length > 0;
 
   // ---------- góndolas ----------
   const matGondola = new THREE.MeshStandardMaterial({ color: COLORES.gondola, roughness: 0.6 });
@@ -496,10 +520,10 @@ export function construirTienda(
   }
 
   const regionGondola: Region = { lados: [] };
-  gondola(-5, true, 1, regionGondola);
-  gondola(0, true, 1, regionGondola);
+  // Todas las góndolas dobles; la de más a la derecha la reemplaza el perchero si hay ropa colgada.
+  for (const x of POS_GONDOLAS) if (x !== ULTIMA) gondola(x, true, 1, regionGondola);
   if (!hayPercheros) {
-    gondola(5, true, 1, regionGondola);
+    gondola(ULTIMA, true, 1, regionGondola);
     gondola(MEDIO_X - 0.05, false, -1, regionGondola);
   }
   if (!hayEstantes) gondola(-MEDIO_X + 0.05, false, 1, regionGondola);
@@ -516,8 +540,6 @@ export function construirTienda(
     (a, b) => pasilloDe(a.x + a.mira * 0.4) - pasilloDe(b.x + b.mira * 0.4) || a.x - b.x,
   );
   const porCategoria = new Map<string, Producto3D[]>();
-  // Sin categoría (WooCommerce no la manda): van juntos como «Otros productos».
-  const grupoDe = (p: Producto3D) => p.categoria || 'Otros productos';
   for (const p of enGondola) porCategoria.set(grupoDe(p), [...(porCategoria.get(grupoDe(p)) ?? []), p]);
   const categorias = [...porCategoria.keys()].sort(
     (a, b) => porCategoria.get(b)!.length - porCategoria.get(a)!.length || a.localeCompare(b),
@@ -625,7 +647,7 @@ export function construirTienda(
         colisiones.push({ minX: Math.min(x, x + mira * 0.6), maxX: Math.max(x, x + mira * 0.6), minZ: z0 - 0.1, maxZ: z1 + 0.1 });
       }
     };
-    rack(5, Z0 + 0.5, Z1 - 0.5, true, 1);
+    rack(ULTIMA, Z0 + 0.5, Z1 - 0.5, true, 1);
     rack(MEDIO_X - 0.35, Z0 + 0.5, Z1 - 0.5, false, -1);
     // Prendas «de frente» (como en una boutique): una al lado de la otra cada 68 cm, mirando al
     // pasillo, apenas giradas y a distinta profundidad para que no se pisen.
@@ -977,7 +999,10 @@ export function construirTienda(
   const matMostrador = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.4 });
   const matCinta = new THREE.MeshStandardMaterial({ color: '#2b3442', roughness: 0.8 });
   const mostradores: Mostrador[] = [];
-  for (const x of [-7.5, 7.5]) {
+  // Tienda base: las cajas a ±7,5 m. Tienda ancha: alineadas con la góndola de más afuera (no tapan
+  // la entrada de ningún pasillo).
+  const X_CAJA = extra ? ULTIMA : 7.5;
+  for (const x of [-X_CAJA, X_CAJA]) {
     const lado = Math.sign(x);
     const m = new THREE.Mesh(new THREE.BoxGeometry(1, 0.9, 3), matMostrador);
     m.position.set(x, 0.45, 8);
@@ -1020,8 +1045,11 @@ export function construirTienda(
   }
 
   // Carriles libres a lo largo de la tienda (para ir solo a la caja sin chocar).
-  const carriles = hayPercheros ? [-2.5, 2.45] : [-2.5, 2.5, 7.75];
-  carriles.push(hayEstantes ? -8.9 : -8.6);
+  // Pasillos interiores (entre góndolas dobles) y los de los costados.
+  const carriles = CENTROS_PASILLO.slice(1, -1);
+  if (hayPercheros) carriles[carriles.length - 1] -= 0.05;
+  else carriles.push(7.75 + 5 * extra);
+  carriles.push((hayEstantes ? -8.9 : -8.6) - 5 * extra);
 
   let tiempo = 0;
   return {

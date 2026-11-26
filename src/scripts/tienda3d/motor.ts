@@ -102,7 +102,7 @@ export function iniciarMotor(
 
   const escena = new THREE.Scene();
   escena.background = new THREE.Color('#dfe7f1');
-  escena.fog = new THREE.Fog('#dfe7f1', 20, 40);
+  escena.fog = new THREE.Fog('#dfe7f1', 24, 55); // hasta el fondo de una tienda ancha (12 pasillos)
 
   // near 0,1: más precisión de profundidad (evita que los colores «tiemblen» de cerca).
   const camara = new THREE.PerspectiveCamera(65, contenedor.clientWidth / contenedor.clientHeight, 0.1, 60);
