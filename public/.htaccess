@@ -13,10 +13,12 @@ Options -Indexes
 </IfModule>
 
 <IfModule mod_deflate.c>
-  AddOutputFilterByType DEFLATE text/html text/css text/plain text/xml application/javascript application/xml image/svg+xml
+  AddOutputFilterByType DEFLATE text/html text/css text/plain text/xml application/javascript application/xml image/svg+xml model/gltf-binary
 </IfModule>
 
 AddType application/manifest+json .webmanifest
+# Personas 3D de la tienda (modelos glTF binarios): tipo correcto y comprimidos al enviarlos.
+AddType model/gltf-binary .glb
 
 <IfModule mod_headers.c>
   # Las páginas se revisan en cada visita (así un deploy se ve enseguida)…
@@ -27,5 +29,9 @@ AddType application/manifest+json .webmanifest
   # CDN de Hostinger no tiene que pedírselos al servidor en cada visita.
   <FilesMatch "\.(svg|png|jpe?g|webp|ico|woff2?)$">
     Header set Cache-Control "public, max-age=86400"
+  </FilesMatch>
+  # Modelos 3D (personas): pesan varios MB y no cambian; se guardan una semana.
+  <FilesMatch "\.glb$">
+    Header set Cache-Control "public, max-age=604800"
   </FilesMatch>
 </IfModule>
