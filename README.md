@@ -142,6 +142,9 @@ su dirección (`/tienda-3d/` o `/tarjetas/`). Para probar la 3D como inicio sin 
   lo deja caer en el carrito y lo agrega a WooCommerce.
 - Letreros de pasillo colgados del techo: «PASILLO N» y las categorías del pasillo, o el texto escrito en
   WordPress (Ajustes → Tindershop → Letreros de los pasillos, una línea por pasillo).
+- Un pasillo por categoría (góndolas): con menos categorías que pasillos, los que sobran repiten las más
+  grandes; con más, cada lado del pasillo lleva una (hasta 8) y las más chicas se suman al lado con menos
+  productos. Productos sin categoría: «Otros productos». Los maniquíes van en la vidriera de la entrada.
 - Personas realistas: cuerpos, peinados y animaciones de **Quaternius** («Universal Base Characters» y
   «Universal Animation Library», licencia **CC0**), en `public/modelos/` (≈4,5 MB, se cargan al entrar).
   Vienen en ropa interior: `src/scripts/tienda3d/personaReal.ts` los viste pintando remera, pantalón y

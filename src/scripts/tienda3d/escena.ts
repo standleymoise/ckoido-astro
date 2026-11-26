@@ -504,16 +504,52 @@ export function construirTienda(
   }
   if (!hayEstantes) gondola(-MEDIO_X + 0.05, false, 1, regionGondola);
 
-  // Productos en góndola: secciones de 1 m, repetidos para que la tienda se vea llena.
+  // Productos en góndola: un pasillo por categoría, como en un súper. Cada pasillo tiene dos caras
+  // (estantes de cada lado); cada categoría va en las suyas, repetida para que se vea lleno.
+  //   - Menos categorías que pasillos: una por pasillo, y los pasillos que sobran repiten las más grandes.
+  //   - Más categorías que pasillos: cada cara de un pasillo lleva una (dos por pasillo, las dos en el letrero).
+  //   - Más categorías que caras: las más chicas se suman a la cara que tenga menos productos.
   type Hueco = { x: number; y: number; z: number; mira: 1 | -1 };
   const huecosPor = new Map<number, Hueco[]>();
-  let n = 0;
-  for (const lado of regionGondola.lados) {
+  const pasilloDe = (x: number) => BORDES_PASILLO.findIndex((b, k) => k > 0 && x < b) - 1;
+  const caras = [...regionGondola.lados].sort(
+    (a, b) => pasilloDe(a.x + a.mira * 0.4) - pasilloDe(b.x + b.mira * 0.4) || a.x - b.x,
+  );
+  const porCategoria = new Map<string, Producto3D[]>();
+  // Sin categoría (WooCommerce no la manda): van juntos como «Otros productos».
+  const grupoDe = (p: Producto3D) => p.categoria || 'Otros productos';
+  for (const p of enGondola) porCategoria.set(grupoDe(p), [...(porCategoria.get(grupoDe(p)) ?? []), p]);
+  const categorias = [...porCategoria.keys()].sort(
+    (a, b) => porCategoria.get(b)!.length - porCategoria.get(a)!.length || a.localeCompare(b),
+  );
+  const pasillosUsados = [...new Set(caras.map((l) => pasilloDe(l.x + l.mira * 0.4)))];
+  const carasDe = (i: number) => caras.filter((l) => pasilloDe(l.x + l.mira * 0.4) === i);
+  // Orden de llenado: la primera cara de cada pasillo, después la segunda.
+  const orden = [...pasillosUsados.map((i) => carasDe(i)[0]), ...pasillosUsados.map((i) => carasDe(i)[1]).filter(Boolean)];
+  const enCara = new Map<Lado, string[]>(caras.map((l) => [l, []]));
+  const cuantos = (l: Lado) => enCara.get(l)!.reduce((t, c) => t + porCategoria.get(c)!.length, 0);
+  categorias.forEach((cat, k) => {
+    if (categorias.length <= pasillosUsados.length) {
+      for (const l of carasDe(pasillosUsados[k])) enCara.get(l)!.push(cat);
+    } else if (k < orden.length) enCara.get(orden[k])!.push(cat);
+    else enCara.get(orden.reduce((a, b) => (cuantos(b) < cuantos(a) ? b : a)))!.push(cat);
+  });
+  // Pasillos que quedaron vacíos (pocas categorías): repiten las categorías, de la más grande a la más chica.
+  pasillosUsados.forEach((i, k) => {
+    for (const l of carasDe(i)) {
+      if (enCara.get(l)!.length) continue;
+      const hermana = carasDe(i).find((o) => enCara.get(o)!.length);
+      enCara.get(l)!.push(...(hermana ? enCara.get(hermana)! : categorias.length ? [categorias[k % categorias.length]] : []));
+    }
+  });
+  for (const lado of caras) {
+    const deCara = enCara.get(lado)!.flatMap((c) => porCategoria.get(c)!);
+    let n = 0;
     for (let z = lado.z0 + SECCION / 2; z < lado.z1; z += SECCION) {
       for (const y of NIVELES) {
-        const p = enGondola[n++ % enGondola.length];
+        const p = deCara[n++ % Math.max(1, deCara.length)];
         if (!p) continue;
-        anotarPasillo(lado.x + lado.mira * 0.4, p.categoria);
+        anotarPasillo(lado.x + lado.mira * 0.4, grupoDe(p));
         const lista = huecosPor.get(p.id) ?? [];
         lista.push({ x: lado.x, y, z, mira: lado.mira });
         huecosPor.set(p.id, lista);
@@ -916,13 +952,14 @@ export function construirTienda(
     const nombres = [...new Set(enVidriera.map((p) => p.categoria).filter(Boolean))].sort().join(' · ') || 'Vidriera';
     // Un maniquí: el cartel justo encima. Más: uno a cada lado de la pantalla.
     for (const x of enVidriera.length > 1 ? [-2.85, 2.85] : [VIDRIERA_X[0]]) {
-      const s = cartel(nombres, 2.2, 0.5, COLORES.franja, '#ffffff', nombres.length > 22 ? 64 : 84);
-      s.position.set(x, 2.75, VIDRIERA_Z);
+      const s = cartel(nombres, 1.7, 0.36, COLORES.franja, '#ffffff', nombres.length > 22 ? 44 : 60);
+      // Bajo, justo sobre los maniquíes: desde la entrada no tapa los letreros de los pasillos.
+      s.position.set(x, 2.3, VIDRIERA_Z);
       escena.add(s);
       const s2 = s.clone();
       s2.rotation.y = Math.PI;
       escena.add(s2);
-      colgar(x, VIDRIERA_Z, 3.0, 0.9);
+      colgar(x, VIDRIERA_Z, 2.48, 0.7);
     }
   }
 
@@ -931,9 +968,9 @@ export function construirTienda(
     const texto = escrito || [...categoriasPasillo[i]].sort().join(' · ');
     if (!texto && !pasillos.length) return; // pasillo vacío: sin letrero
     const l = letrero(i + 1, texto || ' ');
-    l.position.set(x, 2.95, Z1 + 0.4);
+    l.position.set(x, 3.3, Z1 + 0.4);
     escena.add(l);
-    colgar(x, Z1 + 0.4, 3.33, 1.0);
+    colgar(x, Z1 + 0.4, 3.68, 1.0);
   });
 
   // ---------- cajas (mostradores) con su cajero ----------
