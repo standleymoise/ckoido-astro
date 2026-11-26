@@ -229,6 +229,8 @@ export async function cargarPersonas(base: string): Promise<FabricaPersonas> {
     };
     let conCarrito = false;
     let sosteniendo = false;
+    let sinCabeza = false;
+    const cabeza = modelo.getObjectByName('Head');
     const hueso = (n: string) => modelo.getObjectByName(n);
     const brazo = (l: 'l' | 'r') => {
       const hombro = hueso(`upperarm_${l}`);
@@ -254,6 +256,9 @@ export async function cargarPersonas(base: string): Promise<FabricaPersonas> {
           if (caminar) caminar.timeScale = Math.sign(velocidad) * Math.min(1.8, rapidez / 1.35);
         } else cambiarA(quieto);
         mezclador.update(dt);
+        // Las animaciones también mueven la escala de la cabeza: en primera persona se vuelve a
+        // achicar después de cada paso de la animación (si no, la cámara ve la cabeza por dentro).
+        if (sinCabeza && cabeza) cabeza.scale.setScalar(0.001);
         grupo.rotation.y = p.rumbo;
         if (conCarrito && !sosteniendo && brazos) {
           grupo.updateMatrixWorld(true);
@@ -278,7 +283,7 @@ export async function cargarPersonas(base: string): Promise<FabricaPersonas> {
       primeraPersona(si) {
         // La cabeza (con pelo, ojos y cejas, que cuelgan de ese hueso) se achica a nada: la cámara está
         // en sus ojos y no la tapa; el resto del cuerpo se ve al mirar hacia abajo.
-        const cabeza = modelo.getObjectByName('Head');
+        sinCabeza = si;
         if (cabeza) cabeza.scale.setScalar(si ? 0.001 : 1);
       },
     };
