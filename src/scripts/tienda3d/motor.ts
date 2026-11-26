@@ -66,7 +66,7 @@ const VEL_ATRAS = 1.3;
 const VEL_GIRO = 1.9; // rad/s con teclado o joystick
 const RADIO = 0.3;
 const RADIO_CARRITO = 0.36;
-const ALCANCE = 3.2; // metros para elegir un producto
+const ALCANCE = 3.6; // metros para elegir un producto
 
 export type Opciones = {
   /** Aspecto del muñeco de este comprador (número estable, guardado en el navegador). */
@@ -165,10 +165,17 @@ export function iniciarMotor(
     arrastre = { x: e.clientX, y: e.clientY, movio: false, id: e.pointerId };
     lienzo.setPointerCapture(e.pointerId);
   });
+  // Apuntar con el mouse: el producto bajo la flecha queda enfocado (marco amarillo) y un clic lo toma.
+  let raton: THREE.Vector2 | null = null;
+  lienzo.addEventListener('pointerleave', () => (raton = null));
   lienzo.addEventListener('pointermove', (e) => {
     if (document.pointerLockElement === lienzo) {
       mirar(e.movementX, e.movementY);
       return;
+    }
+    if (e.pointerType === 'mouse' && !arrastre?.movio) {
+      const r = lienzo.getBoundingClientRect();
+      raton = new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
     }
     if (!arrastre || e.pointerId !== arrastre.id) return;
     const dx = e.clientX - arrastre.x;
@@ -224,6 +231,32 @@ export function iniciarMotor(
   let enFoco: Producto3D | null = null;
   let golpeFoco: THREE.Intersection | null = null;
   const objetivos = () => [...tienda.elegibles, ...tienda.solidos];
+
+  // Marco amarillo alrededor del producto enfocado (se ve a través de los estantes: siempre visible).
+  const cajaMarco = new THREE.Box3();
+  const marco = new THREE.Box3Helper(cajaMarco, new THREE.Color('#ffd23f'));
+  (marco.material as THREE.LineBasicMaterial).depthTest = false;
+  marco.renderOrder = 10;
+  marco.visible = false;
+  escena.add(marco);
+  const tmpMarco = new THREE.Matrix4();
+  function marcar(golpe: THREE.Intersection | null) {
+    const o = golpe?.object as THREE.Mesh | undefined;
+    if (!golpe || !o?.geometry) {
+      marco.visible = false;
+      return;
+    }
+    if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
+    cajaMarco.copy(o.geometry.boundingBox!);
+    if (golpe.instanceId != null && (o as THREE.InstancedMesh).isInstancedMesh) {
+      (o as THREE.InstancedMesh).getMatrixAt(golpe.instanceId, tmpMarco);
+      cajaMarco.applyMatrix4(tmpMarco);
+    }
+    cajaMarco.applyMatrix4(o.matrixWorld).expandByScalar(0.02);
+    // Algo grande (la pantalla de destacados, un maniquí entero): sin marco.
+    const tam = cajaMarco.getSize(new THREE.Vector3());
+    marco.visible = Math.max(tam.x, tam.y, tam.z) < 1.2;
+  }
 
   /** El producto bajo un punto de la pantalla, si está al alcance del comprador. */
   function golpeBajo(ndc: THREE.Vector2): THREE.Intersection | null {
@@ -750,7 +783,13 @@ export function iniciarMotor(
     if (++cuadro % 6 === 0) {
       let p: Producto3D | null = null;
       let golpeP: THREE.Intersection | null = null;
-      if (modo === 'primera') {
+      // 1) Lo que apunta el mouse (computadora). 2) En primera persona con el mouse tomado, la mira del
+      // centro. 3) Lo que está delante del comprador.
+      if (raton && !tactil && document.pointerLockElement !== lienzo) {
+        golpeP = golpeBajo(raton);
+        p = golpeP ? tienda.productoDe(golpeP) : null;
+      }
+      if (!p && modo === 'primera') {
         golpeP = golpeBajo(centro);
         p = golpeP ? tienda.productoDe(golpeP) : null;
       }
@@ -771,6 +810,8 @@ export function iniciarMotor(
         }
       }
       golpeFoco = golpeP;
+      marcar(enMano ? null : golpeP);
+      lienzo.style.cursor = raton && p && !enMano ? 'pointer' : '';
       if (p !== enFoco && !enMano) {
         enFoco = p;
         ev.enFoco(p);

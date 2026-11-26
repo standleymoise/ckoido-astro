@@ -89,7 +89,8 @@ function fabrica(alCambiar: (t: string) => void): Musica {
   let silencio = false;
 
   function preparar() {
-    ctx = new AudioContext();
+    // «playback»: búfer de audio más grande (menos cortes cuando el 3D usa mucho la computadora).
+    ctx = new AudioContext({ latencyHint: 'playback' });
     const compresor = ctx.createDynamicsCompressor();
     salida = ctx.createGain();
     salida.gain.value = silencio ? 0 : VOLUMEN;
@@ -100,7 +101,10 @@ function fabrica(alCambiar: (t: string) => void): Musica {
     document.addEventListener('visibilitychange', () => {
       if (!ctx) return;
       if (document.hidden) ctx.suspend();
-      else if (!silencio) ctx.resume();
+      else if (!silencio) {
+        ctx.resume();
+        programar();
+      }
     });
   }
 
@@ -206,9 +210,14 @@ function fabrica(alCambiar: (t: string) => void): Musica {
     return 4 * negra;
   }
 
+  // Se programa con 3 s de anticipación: aunque la tienda 3D ocupe el navegador un momento (cargar fotos,
+  // personas), las notas ya están en la placa de sonido y la música no se traba.
+  const ANTICIPO = 3;
   function programar() {
     const c = ctx!;
-    while (tiempoCompas < c.currentTime + 0.6) {
+    // Si el navegador se frenó más que el anticipo, se retoma desde ahora (no se amontonan notas atrasadas).
+    if (tiempoCompas < c.currentTime + 0.05) tiempoCompas = c.currentTime + 0.1;
+    while (tiempoCompas < c.currentTime + ANTICIPO) {
       const e = ESTILOS[cancion];
       tiempoCompas += compasDe(e, compas, tiempoCompas);
       if (++compas >= COMPASES) {
@@ -229,7 +238,7 @@ function fabrica(alCambiar: (t: string) => void): Musica {
       tiempoCompas = ctx!.currentTime + 0.2;
       alCambiar(ESTILOS[cancion].titulo);
       clearInterval(temporizador);
-      temporizador = window.setInterval(programar, 200);
+      temporizador = window.setInterval(programar, 300);
       programar();
     },
     silenciar(si) {
