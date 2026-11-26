@@ -1,0 +1,19 @@
+---
+// Las tarjetas deslizables, siempre en /tarjetas/ (aunque el inicio muestre la tienda 3D).
+// La tienda 3D manda aquí para pagar: /tarjetas/#carrito abre el carrito y el checkout.
+import Base from '../layouts/Base.astro';
+import TiendaSwipe from '../components/tienda/TiendaSwipe.astro';
+import { marca } from '../data/sitio';
+import { getProductos, tiendaActiva } from '../data/tienda';
+import { getCollection } from 'astro:content';
+
+export function getStaticPaths() {
+  return tiendaActiva ? [{ params: { tarjetas: 'tarjetas' } }] : [];
+}
+const productos = await getProductos();
+const testimonios = await getCollection('testimonios');
+const banners = await getCollection('banners');
+---
+<Base title={`${marca.nombre} | ${marca.lema}`} description={marca.descripcion}>
+  <TiendaSwipe productos={productos} testimonios={testimonios} banners={banners} />
+</Base>

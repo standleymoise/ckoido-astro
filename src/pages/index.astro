@@ -6,15 +6,18 @@ import BlogCard from '../components/BlogCard.astro';
 import Hero from '../components/home/Hero.astro';
 import ComoFunciona from '../components/home/ComoFunciona.astro';
 import TiendaSwipe from '../components/tienda/TiendaSwipe.astro';
+import Tienda3D from '../components/tienda3d/Tienda3D.astro';
+import { getExperiencia } from '../data/ajustes';
 import { getPosts } from '../data/blog';
 import { marca, rutas } from '../data/sitio';
 import { getProductos, tiendaActiva } from '../data/tienda';
 import { getCollection } from 'astro:content';
 
-// En modo tienda (Hostinger) el inicio es solo la tienda con tarjetas deslizables,
-// a pantalla completa y sin header ni footer;
+// En modo tienda (Hostinger) el inicio es la experiencia que se eligió en WordPress
+// (Ajustes → Tindershop): las tarjetas deslizables o la tienda 3D, a pantalla completa;
 // en GitHub Pages es una portada sencilla de Tindershop.
 const productos = await getProductos();
+const experiencia = await getExperiencia();
 const posts = tiendaActiva ? [] : (await getPosts()).slice(0, 3);
 // Opiniones de clientes (WordPress: CPT UI «testimonios» + ACF): van mezcladas en el mazo.
 const testimonios = tiendaActiva ? await getCollection('testimonios') : [];
@@ -43,7 +46,11 @@ const jsonLd = {
   jsonLd={jsonLd}
 >
   {tiendaActiva ? (
-    <TiendaSwipe productos={productos} testimonios={testimonios} banners={banners} />
+    experiencia === '3d' ? (
+      <Tienda3D productos={productos} />
+    ) : (
+      <TiendaSwipe productos={productos} testimonios={testimonios} banners={banners} />
+    )
   ) : (
   <>
   <Header />

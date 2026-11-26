@@ -1,0 +1,889 @@
+---
+// Tienda 3D: se recorre caminando entre góndolas, en tercera o primera persona, y se compra con
+// el mismo carrito de WooCommerce que las tarjetas (Store API + Cart-Token). Para pagar se usa el
+// checkout de siempre (/tarjetas/#carrito), así que el pedido entra igual a WooCommerce.
+//   Computadora: WASD / flechas para caminar, mouse para mirar, clic o E para ver un producto,
+//                C cambia la cámara, Shift corre, rueda = zoom (tercera persona).
+//   Celular:     joystick a la izquierda, arrastrar para mirar, tocar un producto para verlo.
+//   VR (WebXR):  gatillo sobre un producto lo agrega; gatillo sobre el piso = teletransporte;
+//                stick izquierdo camina, stick derecho gira de a 30°.
+// Three.js se descarga recién al entrar (la página abre al instante).
+import { getImage } from 'astro:assets';
+import Logo from '../Logo.astro';
+import { rutas, marca } from '../../data/sitio';
+import type { Producto } from '../../data/tienda';
+import { storeApiUrl } from '../../data/tienda';
+
+interface Props {
+  productos: Producto[];
+}
+const { productos } = Astro.props;
+
+// Fotos copiadas al propio sitio y achicadas (384 px): las texturas de WebGL necesitan el mismo
+// dominio (o CORS) y así pesan poco.
+const datos = await Promise.all(
+  productos.map(async (p) => {
+    let img = '';
+    if (p.imagen) {
+      try {
+        img = (await getImage({ src: p.imagen.src, inferSize: true, width: 384, format: 'webp' })).src;
+      } catch {
+        img = '';
+      }
+    }
+    return {
+      id: p.id,
+      sku: p.sku,
+      nombre: p.nombre,
+      precio: p.precio,
+      stock: p.stockTexto,
+      enStock: p.enStock,
+      resumen: p.resumen,
+      img,
+      categoria: p.categorias[0]?.nombre ?? '',
+    };
+  }),
+);
+---
+<main class="t3d" data-api={storeApiUrl} data-productos={JSON.stringify(datos)} data-pagar={`${rutas.tarjetas}#carrito`}>
+  <h1 class="sr-only">{marca.nombre}: tienda 3D</h1>
+  <div class="lienzo" data-lienzo></div>
+  <div class="zona-mirar" data-zona-mirar hidden></div>
+
+  <header class="barra">
+    <Logo size={150} />
+    <div class="barra-botones">
+      <a class="btn-redondo" href={rutas.tarjetas} title="Comprar con tarjetas deslizables">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="11" height="15" rx="2" /><path d="M9 3h9a2 2 0 0 1 2 2v13" /></svg>
+        <span class="sr-only">Comprar con tarjetas</span>
+      </a>
+      <button class="btn-redondo" type="button" data-camara title="Cambiar cámara (C)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h3l2-3h8l2 3h3v11H3z" /><circle cx="12" cy="13" r="3.5" /></svg>
+        <span class="etiqueta-camara" data-etiqueta-camara>3ª</span>
+        <span class="sr-only">Cambiar cámara</span>
+      </button>
+      <button class="btn-redondo" type="button" data-ver-carrito>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.4 10.2a1.5 1.5 0 0 0 1.5 1.1h8.6a1.5 1.5 0 0 0 1.4-1.1L21 8H6.2" /><circle cx="9.5" cy="19.5" r="1.4" /><circle cx="17" cy="19.5" r="1.4" /></svg>
+        <span class="sr-only">Carrito</span>
+        <span class="contador" data-contador hidden>0</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Aviso del producto que está enfrente, y de las cajas -->
+  <div class="avisos">
+    <button class="enfoco" type="button" data-enfoco hidden>
+      <span class="enfoco-nombre" data-enfoco-nombre></span>
+      <span class="enfoco-precio" data-enfoco-precio></span>
+      <span class="enfoco-tecla" data-enfoco-tecla>Ver (E)</span>
+    </button>
+    <a class="pagar" data-pagar-aviso hidden>Pagar en la caja →</a>
+  </div>
+  <div class="mira" data-mira hidden aria-hidden="true"></div>
+
+  <!-- Celular -->
+  <div class="joystick" data-joystick hidden>
+    <div class="joystick-perilla" data-perilla></div>
+  </div>
+  <button class="btn-vr" type="button" data-vr hidden>Entrar en VR</button>
+
+  <!-- Inicio: elegir la cámara -->
+  <section class="inicio" data-inicio aria-labelledby="inicio-titulo">
+    <div class="inicio-caja">
+      <h2 id="inicio-titulo">Bienvenido a la tienda</h2>
+      <p>Recorra los pasillos, acérquese a lo que le guste y agréguelo al carrito.</p>
+      <p class="inicio-pregunta">¿Cómo quiere recorrerla?</p>
+      <div class="inicio-opciones">
+        <button type="button" class="opcion" data-empezar="tercera">
+          <svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="14" r="6" /><path d="M14 40v-8a10 10 0 0 1 20 0v8" /><path d="M6 44l8-6M42 44l-8-6" /></svg>
+          <strong>Tercera persona</strong>
+          <span>Se ve a usted caminando, la cámara lo sigue desde atrás.</span>
+        </button>
+        <button type="button" class="opcion" data-empezar="primera">
+          <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M4 24s7-12 20-12 20 12 20 12-7 12-20 12S4 24 4 24z" /><circle cx="24" cy="24" r="6" /></svg>
+          <strong>Primera persona</strong>
+          <span>Ve la tienda con sus propios ojos.</span>
+        </button>
+      </div>
+      <p class="inicio-ayuda" data-ayuda-pc>
+        <kbd>W A S D</kbd> caminar · <kbd>Shift</kbd> correr · mouse para mirar · clic o <kbd>E</kbd> ver producto · <kbd>C</kbd> cambiar cámara
+      </p>
+      <p class="inicio-ayuda" data-ayuda-tactil hidden>
+        Joystick a la izquierda para caminar · arrastre para mirar · toque un producto para verlo
+      </p>
+      <p class="inicio-cargando" data-cargando hidden>Armando la tienda…</p>
+    </div>
+  </section>
+
+  <!-- Ficha del producto -->
+  <dialog class="hoja" data-ficha aria-labelledby="ficha-nombre">
+    <div class="ficha">
+      <img data-ficha-img alt="" width="384" height="384" />
+      <div class="ficha-texto">
+        <p class="ficha-cat" data-ficha-cat></p>
+        <h2 id="ficha-nombre" data-ficha-nombre></h2>
+        <p class="ficha-precio" data-ficha-precio></p>
+        <p class="ficha-stock" data-ficha-stock></p>
+        <p class="ficha-resumen" data-ficha-resumen></p>
+      </div>
+    </div>
+    <div class="hoja-pie">
+      <button class="btn btn-borde" type="button" data-cerrar>Seguir recorriendo</button>
+      <button class="btn" type="button" data-agregar>Agregar al carrito</button>
+    </div>
+  </dialog>
+
+  <!-- Carrito -->
+  <dialog class="hoja" data-carrito aria-labelledby="carrito-titulo">
+    <h2 id="carrito-titulo">Su carrito</h2>
+    <ul class="carrito-lista" data-carrito-lista></ul>
+    <p class="carrito-vacio" data-carrito-vacio>Todavía no agregó productos.</p>
+    <p class="carrito-total" data-carrito-total></p>
+    <div class="hoja-pie">
+      <button class="btn btn-borde" type="button" data-cerrar>Seguir comprando</button>
+      <a class="btn" data-ir-pagar>Pagar</a>
+    </div>
+  </dialog>
+
+  <p class="aviso" data-aviso role="status" aria-live="polite" hidden></p>
+</main>
+
+<script>
+  import { crearCliente, formato, type Carrito } from '../../scripts/tienda-api';
+  import type { Motor, Modo } from '../../scripts/tienda3d/motor';
+  import type { Producto3D } from '../../scripts/tienda3d/escena';
+
+  const raiz = document.querySelector<HTMLElement>('.t3d')!;
+  const productos: Producto3D[] = JSON.parse(raiz.dataset.productos || '[]');
+  const urlPagar = raiz.dataset.pagar!;
+  const cliente = crearCliente(raiz.dataset.api!);
+  const $ = <T extends HTMLElement = HTMLElement>(s: string) => raiz.querySelector<T>(s)!;
+  const tactil = matchMedia('(pointer: coarse)').matches;
+
+  $('[data-ayuda-pc]').hidden = tactil;
+  $('[data-ayuda-tactil]').hidden = !tactil;
+  $<HTMLAnchorElement>('[data-ir-pagar]').href = urlPagar;
+  $<HTMLAnchorElement>('[data-pagar-aviso]').href = urlPagar;
+  $('[data-enfoco-tecla]').textContent = tactil ? 'Tocar para ver' : 'Ver (E)';
+
+  // ---------- avisos ----------
+  const aviso = $('[data-aviso]');
+  let temporizador = 0;
+  function avisar(texto: string) {
+    aviso.textContent = texto;
+    aviso.hidden = false;
+    clearTimeout(temporizador);
+    temporizador = window.setTimeout(() => (aviso.hidden = true), 2600);
+  }
+
+  // Errores de red del navegador («Failed to fetch») en palabras del cliente.
+  const mensajeError = (e: unknown) =>
+    e instanceof TypeError ? 'No hay conexión con la tienda. Intente de nuevo.' : (e as Error)?.message || 'No se pudo agregar. Intente de nuevo.';
+
+  // ---------- carrito ----------
+  let carrito: Carrito | null = null;
+  function pintarContador() {
+    const c = $('[data-contador]');
+    const n = carrito?.items_count ?? 0;
+    c.textContent = String(n);
+    c.hidden = n === 0;
+  }
+  async function cargarCarrito() {
+    carrito = await cliente.carrito();
+    pintarContador();
+    return carrito;
+  }
+  if (cliente.tieneCarrito()) cargarCarrito().catch(() => {});
+
+  async function agregar(p: Producto3D) {
+    if (!p.enStock) throw new Error('Este producto está agotado por ahora.');
+    carrito = await cliente.agregar(p.id);
+    pintarContador();
+  }
+
+  // ---------- ficha ----------
+  const ficha = $<HTMLDialogElement>('[data-ficha]');
+  let enFicha: Producto3D | null = null;
+  function abrirFicha(p: Producto3D) {
+    enFicha = p;
+    const img = $<HTMLImageElement>('[data-ficha-img]');
+    img.src = p.img;
+    img.hidden = !p.img;
+    img.alt = p.nombre;
+    $('[data-ficha-cat]').textContent = p.categoria;
+    $('[data-ficha-nombre]').textContent = p.nombre;
+    $('[data-ficha-precio]').textContent = p.precio;
+    $('[data-ficha-stock]').textContent = p.stock;
+    $('[data-ficha-stock]').classList.toggle('agotado', !p.enStock);
+    $('[data-ficha-resumen]').textContent = p.resumen;
+    const b = $<HTMLButtonElement>('[data-agregar]');
+    b.disabled = !p.enStock;
+    b.textContent = p.enStock ? 'Agregar al carrito' : 'Agotado';
+    motor?.pausar(true);
+    if (document.pointerLockElement) document.exitPointerLock();
+    ficha.showModal();
+  }
+  $('[data-agregar]').addEventListener('click', async () => {
+    if (!enFicha) return;
+    const b = $<HTMLButtonElement>('[data-agregar]');
+    b.disabled = true;
+    b.textContent = 'Agregando…';
+    try {
+      await agregar(enFicha);
+      ficha.close();
+      avisar(`Agregado al carrito: ${enFicha.nombre}`);
+    } catch (e) {
+      avisar(mensajeError(e));
+      b.disabled = false;
+      b.textContent = 'Agregar al carrito';
+    }
+  });
+
+  // ---------- ver carrito ----------
+  const hojaCarrito = $<HTMLDialogElement>('[data-carrito]');
+  async function abrirCarrito() {
+    if (ficha.open) ficha.close();
+    motor?.pausar(true);
+    if (document.pointerLockElement) document.exitPointerLock();
+    hojaCarrito.showModal();
+    const lista = $('[data-carrito-lista]');
+    lista.replaceChildren();
+    try {
+      const c = cliente.tieneCarrito() ? await cargarCarrito() : null;
+      const items = c?.items ?? [];
+      $('[data-carrito-vacio]').hidden = items.length > 0;
+      $('[data-ir-pagar]').hidden = items.length === 0;
+      $('[data-carrito-total]').textContent = c && items.length ? `Total: ${formato(c.totals.total_price, c.totals)}` : '';
+      for (const it of items) {
+        const li = document.createElement('li');
+        const img = document.createElement('img');
+        img.src = it.images[0]?.thumbnail ?? '';
+        img.alt = '';
+        img.width = img.height = 48;
+        const nombre = document.createElement('span');
+        nombre.textContent = `${it.quantity} × ${it.name}`;
+        const total = document.createElement('strong');
+        total.textContent = formato(it.totals.line_total, it.totals);
+        li.append(img, nombre, total);
+        lista.append(li);
+      }
+    } catch {
+      $('[data-carrito-vacio]').hidden = false;
+      $('[data-carrito-vacio]').textContent = 'No se pudo cargar el carrito. Revise su conexión.';
+    }
+  }
+  $('[data-ver-carrito]').addEventListener('click', abrirCarrito);
+
+  for (const d of [ficha, hojaCarrito]) {
+    d.addEventListener('close', () => motor?.pausar(false));
+    d.addEventListener('click', (e) => {
+      if (e.target === d || (e.target as HTMLElement).closest('[data-cerrar]')) d.close();
+    });
+  }
+
+  // ---------- motor 3D (se descarga al entrar) ----------
+  let motor: Motor | null = null;
+  const etiquetaCamara = $('[data-etiqueta-camara]');
+  const pintarCamara = (m: Modo) => {
+    etiquetaCamara.textContent = m === 'tercera' ? '3ª' : '1ª';
+    $('[data-mira]').hidden = m !== 'primera';
+  };
+
+  async function empezar(modo: Modo) {
+    $('[data-cargando]').hidden = false;
+    raiz.querySelectorAll<HTMLButtonElement>('[data-empezar]').forEach((b) => (b.disabled = true));
+    await document.fonts?.ready;
+    const { iniciarMotor } = await import('../../scripts/tienda3d/motor');
+    const enfoco = $('[data-enfoco]');
+    motor = iniciarMotor($('[data-lienzo]'), productos, {
+      enFoco(p) {
+        enfoco.hidden = !p;
+        if (p) {
+          $('[data-enfoco-nombre]').textContent = p.nombre;
+          $('[data-enfoco-precio]').textContent = p.precio;
+        }
+      },
+      elegir: abrirFicha,
+      enCajas(si) {
+        $('[data-pagar-aviso]').hidden = !si || !(carrito?.items_count);
+      },
+      async agregarVR(p) {
+        try {
+          await agregar(p);
+          return `Agregado: ${p.nombre}`;
+        } catch (e) {
+          return mensajeError(e);
+        }
+      },
+    }, modo);
+    pintarCamara(modo);
+    // ?depurar en la dirección: el motor queda en window.tienda3d (para pruebas).
+    if (new URLSearchParams(location.search).has('depurar')) Object.assign(window, { tienda3d: motor });
+    $('[data-inicio]').hidden = true;
+    if (tactil) {
+      $('[data-joystick]').hidden = false;
+      $('[data-zona-mirar]').hidden = false;
+    }
+    if (await motor.vrDisponible()) $('[data-vr]').hidden = false;
+  }
+  raiz.querySelectorAll<HTMLButtonElement>('[data-empezar]').forEach((b) =>
+    b.addEventListener('click', () => empezar(b.dataset.empezar as Modo).catch(() => {
+      $('[data-cargando]').textContent = 'Su navegador no pudo abrir la tienda 3D. Pruebe con las tarjetas.';
+    })),
+  );
+  $('[data-camara]').addEventListener('click', () => motor && pintarCamara(motor.cambiarModo()));
+  addEventListener('keydown', (e) => {
+    if (e.code === 'KeyC' && motor) setTimeout(() => pintarCamara(motor!.modo()));
+  });
+  $('[data-enfoco]').addEventListener('click', () => motor?.elegirEnFoco());
+  $('[data-vr]').addEventListener('click', () => motor?.entrarVR().catch(() => avisar('No se pudo entrar en VR.')));
+
+  // ---------- celular: joystick y mirar ----------
+  const joy = $('[data-joystick]');
+  const perilla = $('[data-perilla]');
+  let dedoJoy: number | null = null;
+  function moverJoy(e: PointerEvent) {
+    const r = joy.getBoundingClientRect();
+    const radio = r.width / 2;
+    let dx = e.clientX - (r.left + radio);
+    let dy = e.clientY - (r.top + radio);
+    const d = Math.hypot(dx, dy);
+    if (d > radio) {
+      dx = (dx / d) * radio;
+      dy = (dy / d) * radio;
+    }
+    perilla.style.transform = `translate(${dx}px, ${dy}px)`;
+    motor?.joystick(dx / radio, -dy / radio);
+  }
+  joy.addEventListener('pointerdown', (e) => {
+    dedoJoy = e.pointerId;
+    joy.setPointerCapture(e.pointerId);
+    moverJoy(e);
+  });
+  joy.addEventListener('pointermove', (e) => e.pointerId === dedoJoy && moverJoy(e));
+  const soltarJoy = (e: PointerEvent) => {
+    if (e.pointerId !== dedoJoy) return;
+    dedoJoy = null;
+    perilla.style.transform = '';
+    motor?.joystick(0, 0);
+  };
+  joy.addEventListener('pointerup', soltarJoy);
+  joy.addEventListener('pointercancel', soltarJoy);
+
+  const zona = $('[data-zona-mirar]');
+  const dedos = new Map<number, { x: number; y: number; x0: number; y0: number }>();
+  let pellizco = 0;
+  zona.addEventListener('pointerdown', (e) => {
+    zona.setPointerCapture(e.pointerId);
+    dedos.set(e.pointerId, { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY });
+  });
+  zona.addEventListener('pointermove', (e) => {
+    const d = dedos.get(e.pointerId);
+    if (!d) return;
+    if (dedos.size === 2) {
+      // Pellizco: zoom de la cámara de tercera persona.
+      const [a, b] = [...dedos.values()];
+      const antes = Math.hypot(a.x - b.x, a.y - b.y);
+      d.x = e.clientX;
+      d.y = e.clientY;
+      const ahora = Math.hypot(a.x - b.x, a.y - b.y);
+      if (pellizco) motor?.zoom((antes - ahora) * 6);
+      pellizco = ahora;
+      return;
+    }
+    motor?.mirar(e.clientX - d.x, e.clientY - d.y);
+    d.x = e.clientX;
+    d.y = e.clientY;
+  });
+  const soltar = (e: PointerEvent) => {
+    const d = dedos.get(e.pointerId);
+    dedos.delete(e.pointerId);
+    pellizco = 0;
+    // Toque sin arrastrar: elegir lo que hay bajo el dedo.
+    if (d && Math.hypot(e.clientX - d.x0, e.clientY - d.y0) < 8 && e.type === 'pointerup') motor?.elegirEn(e.clientX, e.clientY);
+  };
+  zona.addEventListener('pointerup', soltar);
+  zona.addEventListener('pointercancel', soltar);
+</script>
+
+<style>
+  .t3d {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    background: #eef3fa;
+    color: var(--azul-900);
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .lienzo,
+  .zona-mirar {
+    position: absolute;
+    inset: 0;
+  }
+  .lienzo :global(canvas) {
+    display: block;
+    width: 100%;
+    height: 100%;
+    outline: none;
+  }
+  .zona-mirar[hidden] {
+    display: none;
+  }
+
+  .barra {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 16px;
+    pointer-events: none;
+  }
+  .barra > * {
+    pointer-events: auto;
+  }
+  .barra :global(.logo) {
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.88);
+    box-shadow: 0 4px 14px rgba(10, 67, 131, 0.14);
+  }
+  .barra-botones {
+    display: flex;
+    gap: 8px;
+  }
+  .btn-redondo {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 46px;
+    height: 46px;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.92);
+    color: var(--azul-900);
+    box-shadow: 0 4px 14px rgba(10, 67, 131, 0.16);
+    cursor: pointer;
+  }
+  .btn-redondo svg {
+    width: 22px;
+    height: 22px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .etiqueta-camara {
+    position: absolute;
+    bottom: -4px;
+    right: -4px;
+    min-width: 22px;
+    padding: 1px 5px;
+    border-radius: 999px;
+    background: var(--azul-900);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .contador {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: var(--rojo);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 20px;
+  }
+  .contador[hidden] {
+    display: none;
+  }
+
+  .avisos {
+    position: absolute;
+    left: 50%;
+    bottom: max(20px, env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    display: grid;
+    justify-items: center;
+    gap: 8px;
+    width: min(92vw, 460px);
+    pointer-events: none;
+  }
+  .avisos > * {
+    pointer-events: auto;
+  }
+  .enfoco {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 2px 12px;
+    width: 100%;
+    padding: 12px 16px;
+    border: 0;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.95);
+    color: var(--azul-900);
+    text-align: left;
+    box-shadow: 0 8px 24px rgba(10, 67, 131, 0.18);
+    font: inherit;
+    cursor: pointer;
+  }
+  .enfoco[hidden],
+  .pagar[hidden] {
+    display: none;
+  }
+  .enfoco-nombre {
+    font-weight: 700;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .enfoco-precio {
+    grid-row: 2;
+    color: var(--rojo);
+    font-weight: 800;
+  }
+  .enfoco-tecla {
+    grid-row: 1 / 3;
+    grid-column: 2;
+    align-self: center;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: var(--azul-900);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .pagar {
+    padding: 10px 18px;
+    border-radius: 999px;
+    background: var(--rojo);
+    color: #fff;
+    font-weight: 700;
+    text-decoration: none;
+    box-shadow: 0 8px 24px rgba(237, 40, 83, 0.3);
+  }
+  .mira {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 10px;
+    height: 10px;
+    margin: -5px 0 0 -5px;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    box-shadow: 0 0 0 1px rgba(10, 67, 131, 0.6);
+    pointer-events: none;
+  }
+  .mira[hidden] {
+    display: none;
+  }
+
+  .joystick {
+    position: absolute;
+    left: max(20px, env(safe-area-inset-left));
+    bottom: max(110px, calc(env(safe-area-inset-bottom) + 100px));
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.35);
+    border: 2px solid rgba(255, 255, 255, 0.7);
+    box-shadow: 0 6px 20px rgba(10, 67, 131, 0.16);
+    touch-action: none;
+  }
+  .joystick[hidden] {
+    display: none;
+  }
+  .joystick-perilla {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 52px;
+    height: 52px;
+    margin: -26px 0 0 -26px;
+    border-radius: 50%;
+    background: var(--azul-900);
+    box-shadow: 0 4px 12px rgba(10, 67, 131, 0.35);
+    pointer-events: none;
+  }
+  .btn-vr {
+    position: absolute;
+    right: 16px;
+    bottom: max(110px, calc(env(safe-area-inset-bottom) + 100px));
+    padding: 10px 16px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--azul-900);
+    color: #fff;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .btn-vr[hidden] {
+    display: none;
+  }
+
+  .inicio {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 16px;
+    background: linear-gradient(180deg, rgba(238, 243, 250, 0.96), rgba(255, 255, 255, 0.96));
+    overflow-y: auto;
+  }
+  .inicio[hidden] {
+    display: none;
+  }
+  .inicio-caja {
+    width: min(100%, 640px);
+    text-align: center;
+  }
+  .inicio h2 {
+    margin: 0 0 8px;
+    font-family: var(--font-alt);
+    font-size: clamp(26px, 6vw, 36px);
+  }
+  .inicio p {
+    margin: 0 0 12px;
+    color: var(--texto);
+  }
+  .inicio-pregunta {
+    margin-top: 20px !important;
+    font-weight: 700;
+    color: var(--azul-900) !important;
+  }
+  .inicio-opciones {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin: 12px 0 20px;
+  }
+  .opcion {
+    display: grid;
+    justify-items: center;
+    gap: 6px;
+    padding: 18px 14px;
+    border: 2px solid var(--borde);
+    border-radius: 18px;
+    background: #fff;
+    color: var(--azul-900);
+    font: inherit;
+    cursor: pointer;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .opcion:hover,
+  .opcion:focus-visible {
+    border-color: var(--rojo);
+    transform: translateY(-2px);
+  }
+  .opcion svg {
+    width: 44px;
+    height: 44px;
+    fill: none;
+    stroke: var(--rojo);
+    stroke-width: 2.4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .opcion span {
+    font-size: 13px;
+    color: var(--texto);
+  }
+  .inicio-ayuda {
+    font-size: 13px;
+  }
+  .inicio-ayuda[hidden],
+  .inicio-cargando[hidden] {
+    display: none;
+  }
+  kbd {
+    padding: 1px 6px;
+    border: 1px solid var(--borde);
+    border-radius: 6px;
+    background: #fff;
+    font-size: 12px;
+  }
+  .inicio-cargando {
+    font-weight: 700;
+    color: var(--azul-900) !important;
+  }
+
+  .hoja {
+    width: min(94vw, 560px);
+    max-height: 88svh;
+    padding: 20px;
+    border: 0;
+    border-radius: 22px;
+    color: var(--azul-900);
+    box-shadow: 0 20px 60px rgba(10, 67, 131, 0.3);
+  }
+  .hoja::backdrop {
+    background: rgba(10, 30, 60, 0.35);
+  }
+  .ficha {
+    display: grid;
+    grid-template-columns: 160px 1fr;
+    gap: 16px;
+    align-items: start;
+  }
+  .ficha img {
+    width: 160px;
+    height: 160px;
+    object-fit: cover;
+    border-radius: 14px;
+    background: #f2f5f9;
+  }
+  .ficha h2,
+  .hoja h2 {
+    margin: 0 0 6px;
+    font-family: var(--font-alt);
+    font-size: 22px;
+    line-height: 1.2;
+  }
+  .ficha-cat {
+    margin: 0 0 4px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--texto);
+  }
+  .ficha-precio {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--rojo);
+  }
+  .ficha-stock {
+    margin: 2px 0 10px;
+    font-size: 14px;
+    color: #1a8a4a;
+  }
+  .ficha-stock.agotado {
+    color: var(--rojo);
+  }
+  .ficha-resumen {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--texto);
+  }
+  .hoja-pie {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 18px;
+  }
+  .hoja-pie[hidden],
+  .hoja-pie :global([hidden]) {
+    display: none;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 10px 20px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--rojo);
+    color: #fff;
+    font: inherit;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .btn:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
+  .btn-borde {
+    background: #fff;
+    color: var(--azul-900);
+    border: 1px solid var(--borde);
+  }
+  .carrito-lista {
+    display: grid;
+    gap: 10px;
+    margin: 12px 0;
+    padding: 0;
+    list-style: none;
+  }
+  .carrito-lista li {
+    display: grid;
+    grid-template-columns: 48px 1fr auto;
+    gap: 10px;
+    align-items: center;
+    font-size: 14px;
+  }
+  .carrito-lista img {
+    width: 48px;
+    height: 48px;
+    object-fit: cover;
+    border-radius: 10px;
+  }
+  .carrito-vacio[hidden] {
+    display: none;
+  }
+  .carrito-total {
+    margin: 0;
+    font-weight: 800;
+    text-align: right;
+  }
+  .aviso {
+    position: absolute;
+    top: 74px;
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: 90vw;
+    margin: 0;
+    padding: 10px 16px;
+    border-radius: 999px;
+    background: var(--azul-900);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    box-shadow: 0 8px 24px rgba(10, 67, 131, 0.25);
+  }
+  .aviso[hidden] {
+    display: none;
+  }
+
+  @media (max-width: 520px) {
+    .barra :global(.logo) {
+      --u: 0.62 !important;
+    }
+    .btn-redondo {
+      width: 42px;
+      height: 42px;
+    }
+    .barra-botones {
+      gap: 6px;
+    }
+    .inicio-opciones {
+      grid-template-columns: 1fr;
+    }
+    .ficha {
+      grid-template-columns: 1fr;
+    }
+    .ficha img {
+      width: 100%;
+      height: auto;
+      aspect-ratio: 1;
+      max-height: 34svh;
+      object-fit: contain;
+    }
+  }
+</style>

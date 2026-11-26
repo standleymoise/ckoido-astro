@@ -1,0 +1,16 @@
+---
+// La tienda 3D, siempre en /tienda-3d/ (aunque el inicio muestre las tarjetas): así se puede
+// probar antes de elegirla en WordPress (Ajustes → Tindershop).
+import Base from '../layouts/Base.astro';
+import Tienda3D from '../components/tienda3d/Tienda3D.astro';
+import { marca } from '../data/sitio';
+import { getProductos, tiendaActiva } from '../data/tienda';
+
+export function getStaticPaths() {
+  return tiendaActiva ? [{ params: { tienda3d: 'tienda-3d' } }] : [];
+}
+const productos = await getProductos();
+---
+<Base title={`Tienda 3D | ${marca.nombre}`} description={`Recorra ${marca.nombre} caminando por los pasillos, como en una tienda real.`}>
+  <Tienda3D productos={productos} />
+</Base>

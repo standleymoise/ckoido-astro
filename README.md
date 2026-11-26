@@ -120,3 +120,21 @@ Para usar otros formularios:
 
 Mientras no haya ID, los formularios muestran «Este formulario todavía no está configurado» al enviarlos.
 Cada envío incluye un asunto, un campo `formulario` («Contacto» o «Boletín») para distinguirlos y la trampa anti-spam `_gotcha`.
+
+## Tienda 3D (segunda experiencia)
+
+Además de las tarjetas, el sitio tiene una tienda 3D que se recorre caminando (Three.js), en
+`/tienda-3d/`. En WordPress, **Ajustes → Tindershop** elige cuál se muestra en el inicio; la otra queda en
+su dirección (`/tienda-3d/` o `/tarjetas/`). Para probar la 3D como inicio sin tocar WordPress:
+`EXPERIENCIA=3d npm run build`.
+
+- Código: `src/components/tienda3d/Tienda3D.astro` (interfaz), `src/scripts/tienda3d/` (escena, personaje, motor).
+- Cámaras en tercera y primera persona (misma posición y orientación: cambiar no reinicia el recorrido),
+  colisiones con las góndolas, la cámara de tercera persona no atraviesa estanterías.
+- Computadora: WASD/flechas, mouse, clic o E, C (cámara), Shift (correr), rueda (zoom).
+  Celular: joystick, arrastrar para mirar, tocar producto, pellizcar (zoom). VR (WebXR): gatillo sobre
+  un producto lo agrega; sobre el piso, teletransporte; sticks para caminar y girar.
+- El carrito es el mismo de WooCommerce; para pagar manda a `/tarjetas/#carrito` (checkout de siempre).
+- Rendimiento: geometría simple (sin modelos que descargar), InstancedMesh por producto, fotos de 384 px
+  copiadas al sitio al compilar y cargadas de a poco, sombras solo en equipos potentes, Three.js se
+  descarga recién al entrar. `?depurar` deja el motor en `window.tienda3d` para pruebas.

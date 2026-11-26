@@ -25,6 +25,9 @@ export const rutas = {
   contacto: url('/contacto'),
   // Sin tienda conectada (vista previa) no hay lista de productos: los botones van a Contacto.
   tienda: tiendaActiva ? url('/productos') : url('/contacto'),
+  /** Las dos experiencias de compra, cada una en su dirección (el inicio muestra la elegida). */
+  tarjetas: url('/tarjetas/'),
+  tienda3d: url('/tienda-3d/'),
   favoritos: url('/favoritos'),
   cuenta: url('/cuenta'),
 };
