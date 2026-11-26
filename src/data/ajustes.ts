@@ -25,7 +25,8 @@ function getAjustes(): Promise<Ajustes> {
         if (TIPOS.includes(tipo as Exhibicion)) exhibiciones[slug] = tipo as Exhibicion;
       }
       const experiencia: Experiencia = d.experiencia === '3d' ? '3d' : 'tarjetas';
-      const pasillos = Array.isArray(d.pasillos) ? d.pasillos.map((l: unknown) => String(l ?? '').slice(0, 40)) : [];
+      let pasillos: string[] = Array.isArray(d.pasillos) ? d.pasillos.map((l: unknown) => String(l ?? '').slice(0, 40)) : [];
+      if (pasillos.every((l) => !l.trim())) pasillos = []; // campo vacío en WordPress = sin letreros escritos
       return { experiencia, exhibiciones, pasillos };
     })
     .catch(() => vacio);
