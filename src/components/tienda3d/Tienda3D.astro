@@ -10,7 +10,7 @@
 // Three.js se descarga recién al entrar (la página abre al instante).
 import { getImage } from 'astro:assets';
 import Logo from '../Logo.astro';
-import { rutas, marca } from '../../data/sitio';
+import { rutas, marca, url } from '../../data/sitio';
 import type { Producto } from '../../data/tienda';
 import { storeApiUrl, tiendaUrl } from '../../data/tienda';
 import { getExhibiciones, getDestacados, getPasillos } from '../../data/ajustes';
@@ -60,6 +60,7 @@ const datos = await Promise.all(
   data-pasillos={JSON.stringify(pasillos)}
   data-presencia={`${tiendaUrl}/wp-json/tindershop/v1/presencia`}
   data-pagar={`${rutas.tarjetas}#carrito`}
+  data-modelos={url('/modelos/')}
 >
   <h1 class="sr-only">{marca.nombre}: tienda 3D</h1>
   <div class="lienzo" data-lienzo></div>
@@ -350,6 +351,15 @@ const datos = await Promise.all(
     raiz.querySelectorAll<HTMLButtonElement>('[data-empezar]').forEach((b) => (b.disabled = true));
     await document.fonts?.ready;
     const { iniciarMotor } = await import('../../scripts/tienda3d/motor');
+    // Personas realistas (modelos CC0 de Quaternius). Si no cargan, quedan las personas de figuras.
+    let crearPersona;
+    try {
+      $('[data-cargando]').textContent = 'Armando la tienda y sus personas…';
+      const { cargarPersonas } = await import('../../scripts/tienda3d/personaReal');
+      crearPersona = await cargarPersonas(raiz.dataset.modelos!);
+    } catch {
+      crearPersona = undefined;
+    }
     const enfoco = $('[data-enfoco]');
     motor = iniciarMotor($('[data-lienzo]'), productos, {
       enFoco(p) {
@@ -375,7 +385,7 @@ const datos = await Promise.all(
           return mensajeError(e);
         }
       },
-    }, modo, { aspecto, pasillos: JSON.parse(raiz.dataset.pasillos || '[]') });
+    }, modo, { aspecto, pasillos: JSON.parse(raiz.dataset.pasillos || '[]'), crearPersona });
     pintarCamara(modo);
     // Multijugador: ver a los demás compradores que están en la tienda en este momento.
     const { iniciarPresencia } = await import('../../scripts/tienda3d/presencia');

@@ -11,6 +11,7 @@
 //   exhibidor pantalla de destacados a la entrada (también los productos «destacados» de WooCommerce)
 import * as THREE from 'three';
 import { crearPersonaje, aparienciaDe, type Personaje } from './personaje';
+import type { FabricaPersonas } from './personaReal';
 
 export type Exhibicion = 'gondola' | 'perchero' | 'maniqui' | 'estante' | 'exhibidor';
 
@@ -197,7 +198,13 @@ function geometriaPrenda() {
 type Lado = { x: number; z0: number; z1: number; mira: 1 | -1 };
 type Region = { lados: Lado[] };
 
-export function construirTienda(escena: THREE.Scene, productos: Producto3D[], ligera: boolean, pasillos: string[] = []): Tienda {
+export function construirTienda(
+  escena: THREE.Scene,
+  productos: Producto3D[],
+  ligera: boolean,
+  pasillos: string[] = [],
+  crearPersona?: FabricaPersonas,
+): Tienda {
   const solidos: THREE.Object3D[] = [];
   const elegibles: THREE.Object3D[] = [];
   const colisiones: Caja[] = [];
@@ -788,7 +795,10 @@ export function construirTienda(escena: THREE.Scene, productos: Producto3D[], li
     colgar(x, 8, 2.85, 0.6, true);
     // Cajero detrás del mostrador, mirando al cliente (hacia el centro de la tienda).
     // Uniforme de la tienda (remera azul), cada cajero con su propia cara y peinado.
-    const cajero = crearPersonaje({ ...aparienciaDe(lado > 0 ? 7 : 12), remera: '#0474ba', pantalon: '#2b3442' });
+    const uniforme = { remera: '#0474ba', pantalon: '#2b3442' };
+    const cajero = crearPersona
+      ? crearPersona(lado > 0 ? 7 : 12, uniforme)
+      : crearPersonaje({ ...aparienciaDe(lado > 0 ? 7 : 12), ...uniforme });
     const rumboCajero = (lado * Math.PI) / 2; // caja derecha: mira hacia -x; izquierda: hacia +x
     cajero.posicion.set(x + lado * 0.95, 0, 8);
     cajero.rumbo = rumboCajero;
@@ -869,7 +879,7 @@ export function construirTienda(escena: THREE.Scene, productos: Producto3D[], li
     carriles,
     animar(dt) {
       tiempo += dt;
-      for (const m of mostradores) m.cajero.grupo.position.y = Math.sin(tiempo * 1.6) * 0.004;
+      for (const m of mostradores) m.cajero.animar(dt, 0); // respira (animación de estar quieto)
     },
     inicio: new THREE.Vector3(0, 0, MEDIO_Z - 2.2),
   };

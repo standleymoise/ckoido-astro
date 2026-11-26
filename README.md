@@ -142,8 +142,11 @@ su dirección (`/tienda-3d/` o `/tarjetas/`). Para probar la 3D como inicio sin 
   lo deja caer en el carrito y lo agrega a WooCommerce.
 - Letreros de pasillo colgados del techo: «PASILLO N» y las categorías del pasillo, o el texto escrito en
   WordPress (Ajustes → Tindershop → Letreros de los pasillos, una línea por pasillo).
-- Personas con proporciones reales (codos, rodillas, manos, zapatos, peinados, tonos de piel), distintas
-  para cada comprador (número guardado en el navegador).
+- Personas realistas: cuerpos, peinados y animaciones de **Quaternius** («Universal Base Characters» y
+  «Universal Animation Library», licencia **CC0**), en `public/modelos/` (≈4,5 MB, se cargan al entrar).
+  Vienen en ropa interior: `src/scripts/tienda3d/personaReal.ts` los viste pintando remera, pantalón y
+  zapatos según los huesos (con un poco de volumen) y elige género, piel, peinado y colores por comprador.
+  Si los modelos no cargan, se usan las personas hechas con figuras (`personaje.ts`).
 - Multijugador: cada comprador ve a los demás (con su carrito) y no se pueden atravesar. Usa WordPress
   (`POST /wp-json/tindershop/v1/presencia`, cada ~1 s, sin datos personales); para cientos de personas a la
   vez conviene un servicio de WebSocket (solo cambia `src/scripts/tienda3d/presencia.ts`).

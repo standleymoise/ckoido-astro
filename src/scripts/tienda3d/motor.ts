@@ -12,6 +12,7 @@ import { construirTienda, type Producto3D, type Caja, type Mostrador, type Tomad
 import { crearPersonaje, aparienciaDe, ALTURA_OJOS, type Personaje } from './personaje';
 import { crearCarrito, type ItemCarrito, type Carrito3D } from './carrito';
 import type { Otro } from './presencia';
+import type { FabricaPersonas } from './personaReal';
 
 export type Modo = 'tercera' | 'primera';
 
@@ -72,6 +73,8 @@ export type Opciones = {
   aspecto: number;
   /** Letreros de los pasillos escritos en WordPress (uno por pasillo). */
   pasillos: string[];
+  /** Personas realistas (modelos CC0); sin esto, personas hechas con figuras. */
+  crearPersona?: FabricaPersonas;
 };
 
 export function iniciarMotor(
@@ -103,8 +106,9 @@ export function iniciarMotor(
 
   // near 0,1: más precisión de profundidad (evita que los colores «tiemblen» de cerca).
   const camara = new THREE.PerspectiveCamera(65, contenedor.clientWidth / contenedor.clientHeight, 0.1, 60);
-  const tienda = construirTienda(escena, productos, ligera, opciones.pasillos);
-  const yo = crearPersonaje(aparienciaDe(opciones.aspecto));
+  const nuevaPersona = (n: number) => (opciones.crearPersona ? opciones.crearPersona(n) : crearPersonaje(aparienciaDe(n)));
+  const tienda = construirTienda(escena, productos, ligera, opciones.pasillos, opciones.crearPersona);
+  const yo = nuevaPersona(opciones.aspecto);
   yo.posicion.copy(tienda.inicio);
   yo.rumbo = 0; // mirando hacia adentro de la tienda (-z)
   yo.empujar(true);
@@ -406,7 +410,7 @@ export function iniciarMotor(
       vivos.add(o.id);
       let r = remotos.get(o.id);
       if (!r) {
-        const p = crearPersonaje(aparienciaDe(o.a));
+        const p = nuevaPersona(o.a);
         p.empujar(true);
         p.posicion.set(o.x, 0, o.z);
         p.rumbo = o.r;
