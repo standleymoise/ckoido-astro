@@ -126,6 +126,90 @@ function texturaPiso(): THREE.CanvasTexture {
   return t;
 }
 
+/**
+ * La foto de una prenda sin su fondo: se borra el fondo «inundando» desde los bordes (así una camisa
+ * blanca no pierde su interior), se recorta a la prenda y se calcula su color (para el resto del maniquí).
+ */
+function prendaSinFondo(imagen: CanvasImageSource & { width: number; height: number }) {
+  const max = 384;
+  const k = Math.min(1, max / Math.max(imagen.width, imagen.height));
+  const w = Math.max(1, Math.round(imagen.width * k));
+  const h = Math.max(1, Math.round(imagen.height * k));
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  const g = c.getContext('2d', { willReadFrequently: true })!;
+  g.drawImage(imagen, 0, 0, w, h);
+  const datos = g.getImageData(0, 0, w, h);
+  const d = datos.data;
+  // Color del fondo: el promedio de las cuatro esquinas.
+  let fr = 0;
+  let fg = 0;
+  let fb = 0;
+  for (const [x, y] of [[1, 1], [w - 2, 1], [1, h - 2], [w - 2, h - 2]]) {
+    const i = (y * w + x) * 4;
+    fr += d[i] / 4;
+    fg += d[i + 1] / 4;
+    fb += d[i + 2] / 4;
+  }
+  const esFondo = (i: number) =>
+    d[i + 3] < 20 || Math.abs(d[i] - fr) + Math.abs(d[i + 1] - fg) + Math.abs(d[i + 2] - fb) < 54;
+  const visto = new Uint8Array(w * h);
+  const pila: number[] = [];
+  for (let x = 0; x < w; x++) pila.push(x, (h - 1) * w + x);
+  for (let y = 0; y < h; y++) pila.push(y * w, y * w + w - 1);
+  while (pila.length) {
+    const n = pila.pop()!;
+    if (visto[n]) continue;
+    visto[n] = 1;
+    if (!esFondo(n * 4)) continue;
+    d[n * 4 + 3] = 0;
+    const x = n % w;
+    if (x > 0) pila.push(n - 1);
+    if (x < w - 1) pila.push(n + 1);
+    if (n >= w) pila.push(n - w);
+    if (n < w * (h - 1)) pila.push(n + w);
+  }
+  // Lo que quedó: borde de la prenda y su color promedio.
+  let x0 = w;
+  let y0 = h;
+  let x1 = -1;
+  let y1 = -1;
+  let r = 0;
+  let gg = 0;
+  let b = 0;
+  let n = 0;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4;
+      if (d[i + 3] < 128) continue;
+      x0 = Math.min(x0, x);
+      x1 = Math.max(x1, x);
+      y0 = Math.min(y0, y);
+      y1 = Math.max(y1, y);
+      r += d[i];
+      gg += d[i + 1];
+      b += d[i + 2];
+      n++;
+    }
+  }
+  // Casi nada o casi todo: la foto no tiene un fondo liso que se pueda quitar.
+  if (n < w * h * 0.05 || n > w * h * 0.97) return null;
+  g.putImageData(datos, 0, 0);
+  const recorte = document.createElement('canvas');
+  recorte.width = x1 - x0 + 1;
+  recorte.height = y1 - y0 + 1;
+  recorte.getContext('2d')!.drawImage(c, x0, y0, recorte.width, recorte.height, 0, 0, recorte.width, recorte.height);
+  const t = new THREE.CanvasTexture(recorte);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  return {
+    textura: t,
+    aspecto: recorte.width / recorte.height,
+    color: new THREE.Color(`rgb(${Math.round(r / n)}, ${Math.round(gg / n)}, ${Math.round(b / n)})`),
+  };
+}
+
 /** Cartel con texto (canvas → textura). */
 function cartel(texto: string, ancho: number, alto: number, fondo: string, color: string, px = 96) {
   const escala = 256;
@@ -649,8 +733,10 @@ export function construirTienda(
       torso.scale.z = 0.7;
       parte(new THREE.CapsuleGeometry(0.085, 0.65, 4, 10), piernas, -0.1, 0.78);
       parte(new THREE.CapsuleGeometry(0.085, 0.65, 4, 10), piernas, 0.1, 0.78);
-      parte(new THREE.CapsuleGeometry(0.06, 0.48, 4, 10), ropa, -0.29, 1.4, -0.08);
-      parte(new THREE.CapsuleGeometry(0.06, 0.48, 4, 10), ropa, 0.29, 1.4, 0.08);
+      const brazos = [
+        parte(new THREE.CapsuleGeometry(0.06, 0.48, 4, 10), ropa, -0.29, 1.4, -0.08),
+        parte(new THREE.CapsuleGeometry(0.06, 0.48, 4, 10), ropa, 0.29, 1.4, 0.08),
+      ];
       parte(new THREE.SphereGeometry(0.13, 20, 16), matBlanco, 0, 1.92);
       parte(new THREE.CylinderGeometry(0.05, 0.05, 0.12, 12), matBlanco, 0, 1.76);
       // Cartel con el precio, en el pedestal, mirando a la tienda.
@@ -659,10 +745,36 @@ export function construirTienda(
       g.add(cartelPrecio);
       escena.add(g);
       colisiones.push({ minX: x - 0.5, maxX: x + 0.5, minZ: z - 0.5, maxZ: z + 0.5 });
+      // La prenda: la foto sin fondo, apoyada adelante y atrás del torso (se ve como puesta), y el resto
+      // del cuerpo del color de la prenda. Si la foto no tiene fondo liso, se usa su color promedio.
       conTextura(p, (t) => {
-        ropa.map = t;
-        ropa.color.set('#ffffff');
-        ropa.needsUpdate = true;
+        const prenda = prendaSinFondo(t.image as HTMLImageElement);
+        if (!prenda) {
+          ropa.color.copy(colorDe(p.id));
+          return;
+        }
+        ropa.color.copy(prenda.color);
+        // El cuerpo queda escondido detrás de la foto (las mangas ya están en la foto).
+        brazos.forEach((b) => (b.visible = false));
+        torso.scale.set(0.8, 0.82, 0.6);
+        torso.position.y = 1.36;
+        // Del hombro (1.72) a la cadera (1.0), sin pasarse de ancho.
+        let alto = 0.78;
+        let ancho = alto * prenda.aspecto;
+        if (ancho > 0.74) {
+          ancho = 0.74;
+          alto = ancho / prenda.aspecto;
+        }
+        const mat = new THREE.MeshStandardMaterial({ map: prenda.textura, transparent: true, alphaTest: 0.5, roughness: 0.85 });
+        for (const lado of [1, -1]) {
+          const frente = new THREE.Mesh(new THREE.PlaneGeometry(ancho, alto), mat);
+          frente.position.set(0, 1.72 - alto / 2, lado * 0.16);
+          if (lado < 0) frente.rotation.y = Math.PI;
+          frente.castShadow = !ligera;
+          g.add(frente);
+          elegibles.push(frente);
+          porMalla.set(frente, p);
+        }
       });
     });
   }

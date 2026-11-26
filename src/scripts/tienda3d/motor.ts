@@ -109,7 +109,8 @@ export function iniciarMotor(
   const nuevaPersona = (n: number) => (opciones.crearPersona ? opciones.crearPersona(n) : crearPersonaje(aparienciaDe(n)));
   const tienda = construirTienda(escena, productos, ligera, opciones.pasillos, opciones.crearPersona);
   const yo = nuevaPersona(opciones.aspecto);
-  yo.posicion.copy(tienda.inicio);
+  // Cada comprador entra en un lugar distinto de la entrada (así dos que llegan juntos no quedan encimados).
+  yo.posicion.copy(tienda.inicio).add(new THREE.Vector3((Math.random() * 2 - 1) * 3, 0, -Math.random() * 1.2));
   yo.rumbo = 0; // mirando hacia adentro de la tienda (-z)
   yo.empujar(true);
   escena.add(yo.grupo);
@@ -712,6 +713,8 @@ export function iniciarMotor(
         velocidad = Math.sign(avance) * vel * Math.min(1, Math.abs(avance));
       }
     }
+    // Si otro comprador quedó encima (entró en el mismo lugar o se acercó quieto), se separan solos.
+    if (dinamicas.length && !automatico) resolver(yo.posicion);
     yo.rumbo = yaw;
     yo.animar(dt, velocidad);
     moverCarrito();
